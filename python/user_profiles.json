@@ -1,0 +1,178 @@
+{
+  "current_profile": "기본",
+  "profiles": [
+    {
+      "profile_name": "기본",
+      "config": {
+        "channels": {
+          "web": {
+            "enabled": true,
+            "sound": false,
+            "desktop": true
+          },
+          "telegram": {
+            "enabled": false
+          },
+          "email": {
+            "enabled": false
+          },
+          "tts": {
+            "enabled": false
+          }
+        },
+        "triggers": {
+          "pair_detected": {
+            "enabled": true,
+            "priority": "high"
+          },
+          "long_streak": {
+            "enabled": true,
+            "priority": "medium",
+            "threshold": 5
+          },
+          "multiple_pairs": {
+            "enabled": true,
+            "priority": "high",
+            "threshold": 2
+          },
+          "hourly_summary": {
+            "enabled": false
+          }
+        },
+        "schedule": {
+          "active_hours": {
+            "start": "09:00",
+            "end": "23:00"
+          },
+          "weekend_enabled": true,
+          "quiet_hours": {
+            "start": "00:00",
+            "end": "08:00"
+          }
+        },
+        "limits": {
+          "max_per_hour": 5,
+          "min_interval_seconds": 30,
+          "cooldown_enabled": true
+        }
+      },
+      "created_at": "2025-08-25T18:08:57.639811",
+      "last_updated": "2025-08-25T18:08:57.639813"
+    },
+    {
+      "profile_name": "조용함",
+      "config": {
+        "channels": {
+          "web": {
+            "enabled": true,
+            "sound": false,
+            "desktop": true
+          },
+          "telegram": {
+            "enabled": false
+          },
+          "email": {
+            "enabled": false
+          },
+          "tts": {
+            "enabled": false
+          }
+        },
+        "triggers": {
+          "pair_detected": {
+            "enabled": true,
+            "priority": "high"
+          },
+          "long_streak": {
+            "enabled": true,
+            "priority": "medium",
+            "threshold": 5
+          },
+          "multiple_pairs": {
+            "enabled": true,
+            "priority": "high",
+            "threshold": 2
+          },
+          "hourly_summary": {
+            "enabled": false
+          }
+        },
+        "schedule": {
+          "active_hours": {
+            "start": "09:00",
+            "end": "23:00"
+          },
+          "weekend_enabled": true,
+          "quiet_hours": {
+            "start": "00:00",
+            "end": "08:00"
+          }
+        },
+        "limits": {
+          "max_per_hour": 5,
+          "min_interval_seconds": 30,
+          "cooldown_enabled": true
+        }
+      },
+      "created_at": "2025-08-25T18:08:57.639814",
+      "last_updated": "2025-08-25T18:08:57.639815"
+    },
+    {
+      "profile_name": "집중모드",
+      "config": {
+        "channels": {
+          "web": {
+            "enabled": true,
+            "sound": false,
+            "desktop": true
+          },
+          "telegram": {
+            "enabled": false
+          },
+          "email": {
+            "enabled": false
+          },
+          "tts": {
+            "enabled": false
+          }
+        },
+        "triggers": {
+          "pair_detected": {
+            "enabled": true,
+            "priority": "high"
+          },
+          "long_streak": {
+            "enabled": false
+          },
+          "multiple_pairs": {
+            "enabled": true,
+            "priority": "high",
+            "threshold": 3
+          },
+          "hourly_summary": {
+            "enabled": false
+          }
+        },
+        "schedule": {
+          "active_hours": {
+            "start": "09:00",
+            "end": "23:00"
+          },
+          "weekend_enabled": true,
+          "quiet_hours": {
+            "start": "00:00",
+            "end": "08:00"
+          }
+        },
+        "limits": {
+          "max_per_hour": 5,
+          "min_interval_seconds": 30,
+          "cooldown_enabled": true
+        }
+      },
+      "created_at": "2025-08-25T18:08:57.639815",
+      "last_updated": "2025-08-25T18:08:57.639815"
+    }
+  ],
+  "last_saved": "2025-08-25T18:08:57.639826"
+}

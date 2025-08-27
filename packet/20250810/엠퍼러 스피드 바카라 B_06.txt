@@ -1,0 +1,6 @@
+[06:58:12] [encodedShoeState] gameCount=0
+[06:58:12] {"id":"1754776693605-5685","type":"baccarat.encodedShoeState","args":{"stats":{"gameCount":0,"playerWins":0,"bankerWins":0,"ties":0,"playerPairs":0,"bankerPairs":0},"history":"","history_v2":[],"tableId":"puu43e6c5uvrfikr"},"time":1754776693605}
+[06:58:12] [encodedShoeState] history=0
+[06:59:48] [encodedShoeState] gameCount=1
+[06:59:48] {"id":"1754776789909-9338","type":"baccarat.encodedShoeState","args":{"stats":{"gameCount":1,"playerWins":1,"bankerWins":0,"ties":0,"playerPairs":0,"bankerPairs":0},"history":"$6","history_v2":[{"winner":"Player","playerScore":4,"bankerScore":3}],"tableId":"puu43e6c5uvrfikr"},"time":1754776789909}
+[06:59:48] [encodedShoeState] history=1

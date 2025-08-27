@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오프라인 - Two Very Auto</title>
+    
+    <!-- 현대적 디자인 시스템 -->
+    <link rel="stylesheet" href="modern_design_system.css">
+    <link rel="stylesheet" href="modern_components.css">
+    <link rel="stylesheet" href="mobile_responsive.css">
+    
+    <style>
+        .offline-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-4);
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        }
+        
+        .offline-content {
+            text-align: center;
+            max-width: 500px;
+            background: var(--bg-surface);
+            border-radius: var(--radius-2xl);
+            padding: var(--space-8);
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--color-gray-200);
+        }
+        
+        .offline-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto var(--space-6);
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .offline-icon::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shine 2s ease-in-out infinite;
+        }
+        
+        .offline-icon svg {
+            width: 60px;
+            height: 60px;
+            color: white;
+            z-index: 1;
+        }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        
+        .offline-title {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--space-4);
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .offline-description {
+            font-size: var(--text-lg);
+            color: var(--text-secondary);
+            margin-bottom: var(--space-6);
+            line-height: var(--leading-relaxed);
+        }
+        
+        .offline-features {
+            text-align: left;
+            margin-bottom: var(--space-6);
+        }
+        
+        .offline-features h3 {
+            font-size: var(--text-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--space-3);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .offline-feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .offline-feature-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-2) 0;
+            color: var(--text-secondary);
+        }
+        
+        .offline-feature-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--color-success);
+            flex-shrink: 0;
+        }
+        
+        .offline-actions {
+            display: flex;
+            gap: var(--space-3);
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: var(--space-6);
+        }
+        
+        .retry-btn {
+            padding: var(--space-3) var(--space-6);
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            color: white;
+            border: none;
+            border-radius: var(--radius-xl);
+            font-size: var(--text-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-normal);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            min-height: 48px;
+        }
+        
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .offline-btn {
+            padding: var(--space-3) var(--space-6);
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border: 2px solid var(--color-gray-300);
+            border-radius: var(--radius-xl);
+            font-size: var(--text-base);
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition-normal);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            min-height: 48px;
+        }
+        
+        .offline-btn:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+            transform: translateY(-2px);
+        }
+        
+        .connection-status {
+            padding: var(--space-3);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-4);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: var(--text-sm);
+            font-weight: 500;
+        }
+        
+        .connection-status.offline {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--color-danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        .connection-status.online {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--color-success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: var(--radius-full);
+            background: currentColor;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .last-sync {
+            font-size: var(--text-sm);
+            color: var(--text-tertiary);
+            margin-top: var(--space-4);
+        }
+        
+        @media (max-width: 768px) {
+            .offline-content {
+                padding: var(--space-6);
+                margin: var(--space-4);
+            }
+            
+            .offline-icon {
+                width: 80px;
+                height: 80px;
+                margin-bottom: var(--space-4);
+            }
+            
+            .offline-icon svg {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .offline-title {
+                font-size: var(--text-2xl);
+            }
+            
+            .offline-description {
+                font-size: var(--text-base);
+            }
+            
+            .offline-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+        
+        /* 다크 모드 */
+        [data-theme="dark"] .offline-content {
+            border-color: var(--color-gray-700);
+        }
+        
+        [data-theme="dark"] .offline-btn {
+            border-color: var(--color-gray-600);
+        }
+        
+        [data-theme="dark"] .offline-btn:hover {
+            border-color: var(--color-primary);
+        }
+        
+        /* PWA 설치 프롬프트 */
+        .pwa-install {
+            position: fixed;
+            bottom: var(--space-4);
+            right: var(--space-4);
+            background: var(--bg-surface);
+            border: 1px solid var(--color-gray-200);
+            border-radius: var(--radius-xl);
+            padding: var(--space-4);
+            box-shadow: var(--shadow-lg);
+            max-width: 300px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: var(--transition-normal);
+        }
+        
+        .pwa-install.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .pwa-install-close {
+            position: absolute;
+            top: var(--space-2);
+            right: var(--space-2);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: var(--space-1);
+            border-radius: var(--radius-sm);
+        }
+        
+        .pwa-install-close:hover {
+            background: var(--color-gray-100);
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-content">
+            <!-- 연결 상태 -->
+            <div class="connection-status offline" id="connection-status">
+                <div class="status-dot"></div>
+                <span>인터넷 연결을 확인해주세요</span>
+            </div>
+            
+            <!-- 오프라인 아이콘 -->
+            <div class="offline-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                    <path d="M9 17L15 11"/>
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                </svg>
+            </div>
+            
+            <!-- 제목과 설명 -->
+            <h1 class="offline-title">오프라인 모드</h1>
+            <p class="offline-description">
+                인터넷 연결이 없어도 Two Very Auto의 일부 기능을 사용할 수 있습니다.
+            </p>
+            
+            <!-- 사용 가능한 기능 -->
+            <div class="offline-features">
+                <h3>
+                    <svg class="offline-feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20,6 9,17 4,12"/>
+                    </svg>
+                    오프라인에서 사용 가능
+                </h3>
+                <ul class="offline-feature-list">
+                    <li class="offline-feature-item">
+                        <svg class="offline-feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20,6 9,17 4,12"/>
+                        </svg>
+                        <span>캐시된 대시보드 데이터 보기</span>
+                    </li>
+                    <li class="offline-feature-item">
+                        <svg class="offline-feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20,6 9,17 4,12"/>
+                        </svg>
+                        <span>이전에 저장된 차트 확인</span>
+                    </li>
+                    <li class="offline-feature-item">
+                        <svg class="offline-feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20,6 9,17 4,12"/>
+                        </svg>
+                        <span>과거 패턴 분석 결과 보기</span>
+                    </li>
+                    <li class="offline-feature-item">
+                        <svg class="offline-feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20,6 9,17 4,12"/>
+                        </svg>
+                        <span>앱 설정 및 환경 설정</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- 액션 버튼 -->
+            <div class="offline-actions">
+                <button class="retry-btn" onclick="retryConnection()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23,4 23,10 17,10"/>
+                        <path d="M20.49,15a9,9,0,1,1-2.12-9.36L23,10"/>
+                    </svg>
+                    연결 재시도
+                </button>
+                
+                <a href="/" class="offline-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9,22 9,12 15,12 15,22"/>
+                    </svg>
+                    캐시된 데이터 보기
+                </a>
+            </div>
+            
+            <!-- 마지막 동기화 시간 -->
+            <div class="last-sync" id="last-sync">
+                마지막 동기화: <span id="last-sync-time">알 수 없음</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PWA 설치 프롬프트 -->
+    <div class="pwa-install" id="pwa-install">
+        <button class="pwa-install-close" onclick="hidePWAInstall()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+        
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; color: var(--text-primary);">
+            앱으로 설치하기
+        </h4>
+        <p style="margin: 0 0 12px 0; font-size: 12px; color: var(--text-secondary);">
+            오프라인에서도 빠르게 접근할 수 있습니다.
+        </p>
+        <button class="retry-btn" style="font-size: 12px; padding: 8px 16px;" onclick="installPWA()">
+            설치하기
+        </button>
+    </div>
+
+    <script>
+        // 연결 상태 관리
+        let isOnline = navigator.onLine;
+        let retryAttempts = 0;
+        const maxRetryAttempts = 5;
+        
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            updateConnectionStatus();
+            loadLastSyncTime();
+            checkPWAInstallable();
+            
+            // 온라인/오프라인 이벤트 리스너
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+            
+            // Service Worker 메시지 리스너
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+            }
+        });
+        
+        // 연결 상태 업데이트
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connection-status');
+            
+            if (navigator.onLine) {
+                statusElement.className = 'connection-status online';
+                statusElement.innerHTML = `
+                    <div class="status-dot"></div>
+                    <span>인터넷에 연결되었습니다</span>
+                `;
+            } else {
+                statusElement.className = 'connection-status offline';
+                statusElement.innerHTML = `
+                    <div class="status-dot"></div>
+                    <span>인터넷 연결을 확인해주세요</span>
+                `;
+            }
+        }
+        
+        // 온라인 상태
+        function handleOnline() {
+            isOnline = true;
+            retryAttempts = 0;
+            updateConnectionStatus();
+            
+            // 자동으로 메인 페이지로 리디렉션
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1500);
+        }
+        
+        // 오프라인 상태
+        function handleOffline() {
+            isOnline = false;
+            updateConnectionStatus();
+        }
+        
+        // 연결 재시도
+        async function retryConnection() {
+            if (retryAttempts >= maxRetryAttempts) {
+                alert('연결 재시도 횟수를 초과했습니다. 네트워크 설정을 확인해주세요.');
+                return;
+            }
+            
+            retryAttempts++;
+            const retryBtn = document.querySelector('.retry-btn');
+            const originalText = retryBtn.innerHTML;
+            
+            // 로딩 표시
+            retryBtn.innerHTML = `
+                <div style="width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                연결 시도 중... (${retryAttempts}/${maxRetryAttempts})
+            `;
+            retryBtn.disabled = true;
+            
+            try {
+                // 서버 연결 테스트
+                const response = await fetch('/api/status', {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                if (response.ok) {
+                    // 연결 성공
+                    retryBtn.innerHTML = `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20,6 9,17 4,12"/>
+                        </svg>
+                        연결 성공!
+                    `;
+                    
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    throw new Error('Server not responding');
+                }
+                
+            } catch (error) {
+                // 연결 실패
+                retryBtn.innerHTML = originalText;
+                retryBtn.disabled = false;
+                
+                console.warn('Connection retry failed:', error);
+                
+                if (retryAttempts < maxRetryAttempts) {
+                    setTimeout(() => {
+                        retryBtn.innerHTML = originalText;
+                        retryBtn.disabled = false;
+                    }, 2000);
+                }
+            }
+        }
+        
+        // 마지막 동기화 시간 로드
+        function loadLastSyncTime() {
+            const lastSync = localStorage.getItem('lastSyncTime');
+            const lastSyncElement = document.getElementById('last-sync-time');
+            
+            if (lastSync) {
+                const date = new Date(parseInt(lastSync));
+                lastSyncElement.textContent = date.toLocaleString('ko-KR');
+            } else {
+                lastSyncElement.textContent = '동기화 기록 없음';
+            }
+        }
+        
+        // Service Worker 메시지 처리
+        function handleServiceWorkerMessage(event) {
+            const { type, data } = event.data;
+            
+            switch (type) {
+                case 'CACHE_UPDATED':
+                    localStorage.setItem('lastSyncTime', Date.now().toString());
+                    loadLastSyncTime();
+                    break;
+                    
+                case 'OFFLINE_READY':
+                    console.log('Offline functionality ready');
+                    break;
+                    
+                default:
+                    console.log('Service Worker message:', event.data);
+            }
+        }
+        
+        // PWA 설치 관련
+        let deferredPrompt;
+        
+        // PWA 설치 가능성 확인
+        function checkPWAInstallable() {
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                showPWAInstall();
+            });
+        }
+        
+        // PWA 설치 프롬프트 표시
+        function showPWAInstall() {
+            const installPrompt = document.getElementById('pwa-install');
+            installPrompt.classList.add('show');
+        }
+        
+        // PWA 설치 프롬프트 숨기기
+        function hidePWAInstall() {
+            const installPrompt = document.getElementById('pwa-install');
+            installPrompt.classList.remove('show');
+        }
+        
+        // PWA 설치 실행
+        async function installPWA() {
+            if (!deferredPrompt) {
+                alert('이 브라우저에서는 앱 설치가 지원되지 않습니다.');
+                return;
+            }
+            
+            deferredPrompt.prompt();
+            
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                console.log('PWA installation accepted');
+                hidePWAInstall();
+            } else {
+                console.log('PWA installation dismissed');
+            }
+            
+            deferredPrompt = null;
+        }
+        
+        // 테마 토글 (다크/라이트)
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+        
+        // 저장된 테마 적용
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+        
+        // 스피너 애니메이션 CSS 추가
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

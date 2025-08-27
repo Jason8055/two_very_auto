@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>바카라 페어 데이터 모니터링</title>
+    <style>
+        /* 기본 스타일링 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+        
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.15);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 120px;
+            margin: 5px;
+        }
+        
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        /* 필터 섹션 */
+        .filter-section {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-group label {
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .filter-group select, .filter-group input {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e53);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        /* 페어 리스트 */
+        .pair-list {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .pair-list h2 {
+            margin-bottom: 20px;
+            color: #ffd700;
+            text-align: center;
+        }
+        
+        .pair-item {
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .pair-item:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateX(5px);
+        }
+        
+        .pair-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .table-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .pair-type {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        .pair-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .pair-stat {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .pair-stat .label {
+            color: #cccccc;
+        }
+        
+        .pair-stat .value {
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        /* 상세 모달 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            margin: 50px auto;
+            padding: 30px;
+            width: 90%;
+            max-width: 800px;
+            border-radius: 20px;
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 15px;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            color: #3498db;
+        }
+        
+        .close-btn {
+            font-size: 2rem;
+            cursor: pointer;
+            color: #e74c3c;
+            transition: color 0.3s;
+        }
+        
+        .close-btn:hover {
+            color: #c0392b;
+        }
+        
+        .detail-section {
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .detail-title {
+            font-size: 1.2rem;
+            color: #f39c12;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #f39c12;
+            padding-bottom: 5px;
+        }
+        
+        .card-display {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        
+        .card {
+            background: white;
+            color: #333;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+        }
+        
+        .card.red {
+            color: #e74c3c;
+        }
+        
+        .card.black {
+            color: #2c3e50;
+        }
+        
+        /* 로딩 및 에러 상태 */
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2rem;
+            color: #ffd700;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 20px;
+            background: rgba(231,76,60,0.2);
+            border-radius: 10px;
+            color: #e74c3c;
+            margin: 20px 0;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #cccccc;
+            font-size: 1.1rem;
+        }
+        
+        /* 실시간 업데이트 표시 */
+        .live-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #27ae60;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            animation: pulse 2s infinite;
+        }
+        
+        .live-indicator.offline {
+            background: #e74c3c;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group {
+                margin-bottom: 10px;
+            }
+            
+            .pair-info {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                margin: 20px auto;
+                width: 95%;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 실시간 상태 표시 -->
+    <div class="live-indicator" id="liveIndicator">
+        🟢 실시간 연결됨
+    </div>
+
+    <div class="container">
+        <!-- 헤더 섹션 -->
+        <div class="header">
+            <h1>🎯 바카라 페어 데이터 모니터링</h1>
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalPairs">0</div>
+                    <div class="stat-label">전체 페어</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="todayPairs">0</div>
+                    <div class="stat-label">오늘 페어</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeTables">0</div>
+                    <div class="stat-label">활성 테이블</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="pairRate">0%</div>
+                    <div class="stat-label">페어 비율</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 필터 섹션 -->
+        <div class="filter-section">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>테이블:</label>
+                    <select id="tableFilter">
+                        <option value="">전체 테이블</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>페어 타입:</label>
+                    <select id="pairTypeFilter">
+                        <option value="">전체 타입</option>
+                        <option value="PLAYER_PAIR">플레이어 페어</option>
+                        <option value="BANKER_PAIR">뱅커 페어</option>
+                        <option value="BOTH_PAIR">양쪽 페어</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>날짜:</label>
+                    <input type="date" id="dateFilter">
+                </div>
+                <div class="filter-group">
+                    <button class="btn" onclick="applyFilters()">필터 적용</button>
+                    <button class="btn" onclick="resetFilters()">초기화</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 페어 리스트 섹션 -->
+        <div class="pair-list">
+            <h2>📋 페어 발생 목록</h2>
+            <div id="pairContainer">
+                <div class="loading">
+                    데이터를 불러오는 중...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 상세 정보 모달 -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">페어 상세 정보</h2>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            
+            <div class="detail-section">
+                <div class="detail-title">🎲 기본 정보</div>
+                <div id="basicInfo"></div>
+            </div>
+            
+            <div class="detail-section">
+                <div class="detail-title">🃏 카드 정보</div>
+                <div id="cardInfo"></div>
+            </div>
+            
+            <div class="detail-section">
+                <div class="detail-title">📊 게임 결과</div>
+                <div id="gameResult"></div>
+            </div>
+            
+            <div class="detail-section">
+                <div class="detail-title">🔮 AI 예측 정보</div>
+                <div id="aiPrediction"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let websocket = null;
+        let pairData = [];
+        let filteredData = [];
+        let currentFilters = {
+            table: '',
+            pairType: '',
+            date: ''
+        };
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeWebSocket();
+            loadInitialData();
+            setupEventListeners();
+        });
+
+        // WebSocket 연결 설정
+        function initializeWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/pair-updates`;
+            
+            try {
+                websocket = new WebSocket(wsUrl);
+                
+                websocket.onopen = function(event) {
+                    console.log('WebSocket 연결 성공');
+                    updateLiveIndicator(true);
+                };
+                
+                websocket.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    handleRealtimeUpdate(data);
+                };
+                
+                websocket.onclose = function(event) {
+                    console.log('WebSocket 연결 종료');
+                    updateLiveIndicator(false);
+                    // 5초 후 재연결 시도
+                    setTimeout(initializeWebSocket, 5000);
+                };
+                
+                websocket.onerror = function(error) {
+                    console.error('WebSocket 오류:', error);
+                    updateLiveIndicator(false);
+                };
+                
+            } catch (error) {
+                console.error('WebSocket 연결 실패:', error);
+                updateLiveIndicator(false);
+            }
+        }
+
+        // 실시간 상태 표시 업데이트
+        function updateLiveIndicator(isOnline) {
+            const indicator = document.getElementById('liveIndicator');
+            if (isOnline) {
+                indicator.textContent = '🟢 실시간 연결됨';
+                indicator.classList.remove('offline');
+            } else {
+                indicator.textContent = '🔴 연결 끊김';
+                indicator.classList.add('offline');
+            }
+        }
+
+        // 초기 데이터 로드
+        async function loadInitialData() {
+            try {
+                // 페어 데이터 로드
+                const pairResponse = await fetch('/api/pairs/recent?limit=100');
+                if (pairResponse.ok) {
+                    pairData = await pairResponse.json();
+                    filteredData = [...pairData];
+                    renderPairList();
+                }
+
+                // 통계 데이터 로드
+                const statsResponse = await fetch('/api/stats/overview');
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    updateStatistics(stats);
+                }
+
+                // 테이블 목록 로드
+                const tablesResponse = await fetch('/api/tables/list');
+                if (tablesResponse.ok) {
+                    const tables = await tablesResponse.json();
+                    updateTableFilter(tables);
+                }
+
+            } catch (error) {
+                console.error('초기 데이터 로드 실패:', error);
+                showError('데이터를 불러오는데 실패했습니다.');
+            }
+        }
+
+        // 실시간 업데이트 처리
+        function handleRealtimeUpdate(data) {
+            switch (data.type) {
+                case 'new_pair':
+                    // 새로운 페어 데이터 추가
+                    pairData.unshift(data.pair);
+                    if (pairData.length > 100) {
+                        pairData = pairData.slice(0, 100);
+                    }
+                    applyFilters();
+                    showNewPairNotification(data.pair);
+                    break;
+                
+                case 'stats_update':
+                    // 통계 정보 업데이트
+                    updateStatistics(data.stats);
+                    break;
+                
+                case 'table_update':
+                    // 테이블 정보 업데이트
+                    updateTableFilter(data.tables);
+                    break;
+            }
+        }
+
+        // 새 페어 알림 표시
+        function showNewPairNotification(pair) {
+            // 브라우저 알림 (권한이 있는 경우)
+            if (Notification.permission === 'granted') {
+                new Notification(`새로운 페어 발생!`, {
+                    body: `${pair.table_name}에서 ${pair.pair_type} 페어 발생`,
+                    icon: '/static/favicon.ico'
+                });
+            }
+            
+            // 페이지 제목 깜빡임 효과
+            let originalTitle = document.title;
+            let isBlinking = true;
+            let blinkCount = 0;
+            
+            const blinkInterval = setInterval(() => {
+                document.title = isBlinking ? '🚨 새 페어 발생!' : originalTitle;
+                isBlinking = !isBlinking;
+                blinkCount++;
+                
+                if (blinkCount >= 6) {
+                    clearInterval(blinkInterval);
+                    document.title = originalTitle;
+                }
+            }, 500);
+        }
+
+        // 통계 정보 업데이트
+        function updateStatistics(stats) {
+            document.getElementById('totalPairs').textContent = stats.total_pairs || 0;
+            document.getElementById('todayPairs').textContent = stats.today_pairs || 0;
+            document.getElementById('activeTables').textContent = stats.active_tables || 0;
+            document.getElementById('pairRate').textContent = `${(stats.pair_rate || 0).toFixed(1)}%`;
+        }
+
+        // 테이블 필터 업데이트
+        function updateTableFilter(tables) {
+            const tableFilter = document.getElementById('tableFilter');
+            const currentValue = tableFilter.value;
+            
+            // 기존 옵션들 제거 (첫 번째 "전체 테이블" 옵션 제외)
+            while (tableFilter.children.length > 1) {
+                tableFilter.removeChild(tableFilter.lastChild);
+            }
+            
+            // 새 테이블 옵션들 추가
+            tables.forEach(table => {
+                const option = document.createElement('option');
+                option.value = table.name;
+                option.textContent = table.name;
+                tableFilter.appendChild(option);
+            });
+            
+            // 이전 선택값 복원
+            if (currentValue) {
+                tableFilter.value = currentValue;
+            }
+        }
+
+        // 페어 목록 렌더링
+        function renderPairList() {
+            const container = document.getElementById('pairContainer');
+            
+            if (filteredData.length === 0) {
+                container.innerHTML = '<div class="no-data">표시할 페어 데이터가 없습니다.</div>';
+                return;
+            }
+            
+            const html = filteredData.map(pair => {
+                const pairTypeKorean = getPairTypeKorean(pair.pair_type);
+                const timeString = new Date(pair.game_time).toLocaleString('ko-KR');
+                
+                return `
+                    <div class="pair-item" onclick="showPairDetail('${pair.id || pair.game_id}')">
+                        <div class="pair-header">
+                            <div class="table-name">${pair.table_name}</div>
+                            <div class="pair-type">${pairTypeKorean}</div>
+                        </div>
+                        <div class="pair-info">
+                            <div class="pair-stat">
+                                <span class="label">발생 시간:</span>
+                                <span class="value">${timeString}</span>
+                            </div>
+                            <div class="pair-stat">
+                                <span class="label">페어 카드:</span>
+                                <span class="value">${pair.pair_cards?.join(', ') || '-'}</span>
+                            </div>
+                            <div class="pair-stat">
+                                <span class="label">게임 결과:</span>
+                                <span class="value">${pair.result || '-'}</span>
+                            </div>
+                            <div class="pair-stat">
+                                <span class="label">발생 빈도:</span>
+                                <span class="value">${pair.frequency || 1}회</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // 페어 타입 한국어 변환
+        function getPairTypeKorean(pairType) {
+            const typeMap = {
+                'PLAYER_PAIR': '플레이어 페어',
+                'BANKER_PAIR': '뱅커 페어',
+                'BOTH_PAIR': '양쪽 페어',
+                'NO_PAIR': '페어 없음'
+            };
+            return typeMap[pairType] || pairType;
+        }
+
+        // 페어 상세 정보 표시
+        async function showPairDetail(pairId) {
+            try {
+                const response = await fetch(`/api/pairs/${pairId}/detail`);
+                if (response.ok) {
+                    const detail = await response.json();
+                    displayPairDetail(detail);
+                } else {
+                    showError('상세 정보를 불러올 수 없습니다.');
+                }
+            } catch (error) {
+                console.error('상세 정보 로드 실패:', error);
+                showError('상세 정보를 불러오는데 실패했습니다.');
+            }
+        }
+
+        // 페어 상세 정보 표시
+        function displayPairDetail(detail) {
+            // 기본 정보
+            document.getElementById('basicInfo').innerHTML = `
+                <div class="pair-info">
+                    <div class="pair-stat">
+                        <span class="label">테이블명:</span>
+                        <span class="value">${detail.table_name}</span>
+                    </div>
+                    <div class="pair-stat">
+                        <span class="label">게임 번호:</span>
+                        <span class="value">${detail.game_number}</span>
+                    </div>
+                    <div class="pair-stat">
+                        <span class="label">발생 시간:</span>
+                        <span class="value">${new Date(detail.game_time).toLocaleString('ko-KR')}</span>
+                    </div>
+                    <div class="pair-stat">
+                        <span class="label">페어 타입:</span>
+                        <span class="value">${getPairTypeKorean(detail.pair_type)}</span>
+                    </div>
+                </div>
+            `;
+
+            // 카드 정보
+            const playerCards = detail.player_cards?.map(card => 
+                `<div class="card ${getCardColor(card)}">${card}</div>`
+            ).join('') || '';
+            
+            const bankerCards = detail.banker_cards?.map(card => 
+                `<div class="card ${getCardColor(card)}">${card}</div>`
+            ).join('') || '';
+            
+            const pairCards = detail.pair_cards?.map(card => 
+                `<div class="card ${getCardColor(card)}">${card}</div>`
+            ).join('') || '';
+
+            document.getElementById('cardInfo').innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <strong>플레이어 카드:</strong>
+                    <div class="card-display">${playerCards}</div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>뱅커 카드:</strong>
+                    <div class="card-display">${bankerCards}</div>
+                </div>
+                <div>
+                    <strong>페어 카드:</strong>
+                    <div class="card-display">${pairCards}</div>
+                </div>
+            `;
+
+            // 게임 결과
+            document.getElementById('gameResult').innerHTML = `
+                <div class="pair-info">
+                    <div class="pair-stat">
+                        <span class="label">승부 결과:</span>
+                        <span class="value">${detail.result || '-'}</span>
+                    </div>
+                    <div class="pair-stat">
+                        <span class="label">플레이어 점수:</span>
+                        <span class="value">${detail.player_score || '-'}</span>
+                    </div>
+                    <div class="pair-stat">
+                        <span class="label">뱅커 점수:</span>
+                        <span class="value">${detail.banker_score || '-'}</span>
+                    </div>
+                    <div class="pair-stat">
+                        <span class="label">내추럴:</span>
+                        <span class="value">${detail.is_natural ? '예' : '아니오'}</span>
+                    </div>
+                </div>
+            `;
+
+            // AI 예측 정보
+            if (detail.ai_prediction) {
+                document.getElementById('aiPrediction').innerHTML = `
+                    <div class="pair-info">
+                        <div class="pair-stat">
+                            <span class="label">예측 결과:</span>
+                            <span class="value">${getPairTypeKorean(detail.ai_prediction.predicted_pair_type)}</span>
+                        </div>
+                        <div class="pair-stat">
+                            <span class="label">신뢰도:</span>
+                            <span class="value">${(detail.ai_prediction.confidence * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="pair-stat">
+                            <span class="label">예측 방법:</span>
+                            <span class="value">${detail.ai_prediction.prediction_method === 'deep_learning' ? '딥러닝' : '통계적 분석'}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                document.getElementById('aiPrediction').innerHTML = '<div class="no-data">AI 예측 정보가 없습니다.</div>';
+            }
+
+            // 모달 표시
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        // 카드 색상 결정
+        function getCardColor(card) {
+            if (card.includes('♥') || card.includes('♦')) {
+                return 'red';
+            }
+            return 'black';
+        }
+
+        // 모달 닫기
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        // 필터 적용
+        function applyFilters() {
+            const tableFilter = document.getElementById('tableFilter').value;
+            const pairTypeFilter = document.getElementById('pairTypeFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+            
+            currentFilters = {
+                table: tableFilter,
+                pairType: pairTypeFilter,
+                date: dateFilter
+            };
+            
+            filteredData = pairData.filter(pair => {
+                // 테이블 필터
+                if (tableFilter && pair.table_name !== tableFilter) {
+                    return false;
+                }
+                
+                // 페어 타입 필터
+                if (pairTypeFilter && pair.pair_type !== pairTypeFilter) {
+                    return false;
+                }
+                
+                // 날짜 필터
+                if (dateFilter) {
+                    const pairDate = new Date(pair.game_time).toISOString().split('T')[0];
+                    if (pairDate !== dateFilter) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+            
+            renderPairList();
+        }
+
+        // 필터 초기화
+        function resetFilters() {
+            document.getElementById('tableFilter').value = '';
+            document.getElementById('pairTypeFilter').value = '';
+            document.getElementById('dateFilter').value = '';
+            
+            currentFilters = { table: '', pairType: '', date: '' };
+            filteredData = [...pairData];
+            renderPairList();
+        }
+
+        // 오류 메시지 표시
+        function showError(message) {
+            const container = document.getElementById('pairContainer');
+            container.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            // 모달 배경 클릭시 닫기
+            document.getElementById('detailModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeModal();
+                }
+            });
+
+            // 브라우저 알림 권한 요청
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+
+            // 페이지 언로드시 WebSocket 연결 종료
+            window.addEventListener('beforeunload', function() {
+                if (websocket) {
+                    websocket.close();
+                }
+            });
+        }
+    </script>
+</body>
+</html>

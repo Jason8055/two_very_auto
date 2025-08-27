@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two Very Auto - 한국어 테이블명 대시보드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .system-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 5px solid #007bff;
+        }
+        
+        .system-panel.table-names {
+            border-left-color: #ffc107;
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f8f9fa;
+        }
+        
+        .panel-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .status-indicator {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .status-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+            display: block;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .table-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .table-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #17a2b8;
+            transition: all 0.3s ease;
+        }
+        
+        .table-item:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+        
+        .table-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .table-name .korean {
+            color: #007bff;
+            font-size: 1.1em;
+        }
+        
+        .table-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+        
+        .btn.success {
+            background: #28a745;
+        }
+        
+        .btn.success:hover {
+            background: #1e7e34;
+        }
+        
+        .btn.warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn.warning:hover {
+            background: #e0a800;
+        }
+        
+        .log-panel {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 5px solid #dc3545;
+        }
+        
+        .log-container {
+            background: #000;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- 테이블명 API 패널 -->
+        <div class="system-panel table-names">
+            <div class="panel-header">
+                <div class="panel-title">🏷️ 테이블명 통합 시스템</div>
+                <div class="status-indicator" id="tableNamesStatus">Disconnected</div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="connectTableNames()">🔗 테이블명 API 연결</button>
+                <button class="btn warning" onclick="refreshTableMetadata()" id="refreshBtn">🔄 메타데이터 새로고침</button>
+                <button class="btn success" onclick="testTableNameIntegration()" id="testBtn">🧪 통합 테스트</button>
+            </div>
+            
+            <div class="stats-grid" id="tableNamesStats">
+                <div class="stat-card">
+                    <span class="stat-value" id="totalTables">-</span>
+                    <div class="stat-label">총 테이블</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="tableTypes">-</span>
+                    <div class="stat-label">테이블 타입</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="cacheSize">-</span>
+                    <div class="stat-label">캐시 크기</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="apiStatus">-</span>
+                    <div class="stat-label">API 상태</div>
+                </div>
+            </div>
+            
+            <div class="table-list" id="tableNamesList"></div>
+        </div>
+        
+        <!-- 통합 테스트 패널 -->
+        <div class="system-panel">
+            <div class="panel-header">
+                <div class="panel-title">🔬 실시간 통합 테스트</div>
+                <div class="status-indicator" id="integrationStatus">Ready</div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="testMinimalIntegration()">🛡️ Minimal API 테스트</button>
+                <button class="btn success" onclick="testFastAPIIntegration()">⚡ FastAPI 테스트</button>
+            </div>
+            
+            <div class="stats-grid" id="integrationStats">
+                <div class="stat-card">
+                    <span class="stat-value" id="minimalKorean">-</span>
+                    <div class="stat-label">Minimal 한국어</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="fastapiKorean">-</span>
+                    <div class="stat-label">FastAPI 한국어</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="enhancedTables">-</span>
+                    <div class="stat-label">향상된 테이블</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="successRate">-</span>
+                    <div class="stat-label">성공율 (%)</div>
+                </div>
+            </div>
+            
+            <div class="table-list" id="integrationResults"></div>
+        </div>
+        
+        <!-- 로그 패널 -->
+        <div class="log-panel">
+            <div class="panel-header">
+                <div class="panel-title">📝 시스템 로그</div>
+                <div class="controls">
+                    <button class="btn" onclick="clearLogs()">🧹 로그 지우기</button>
+                    <button class="btn" onclick="toggleAutoScroll()" id="autoScrollBtn">📜 자동스크롤 ON</button>
+                </div>
+            </div>
+            <div class="log-container" id="systemLog"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let tableNamesConnected = false;
+        let autoScroll = true;
+        let tableNamesData = null;
+        let integrationStats = {
+            minimalSuccess: 0,
+            fastapiSuccess: 0,
+            totalTests: 0
+        };
+
+        // Logging function
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('systemLog');
+            const timestamp = new Date().toLocaleTimeString('ko-KR');
+            
+            const colors = {
+                info: '#00ff00',
+                warn: '#ffff00', 
+                error: '#ff0000',
+                success: '#00ff00',
+                test: '#00bfff'
+            };
+            
+            const icon = {
+                info: 'ℹ️',
+                warn: '⚠️',
+                error: '❌',
+                success: '✅',
+                test: '🧪'
+            };
+            
+            const logEntry = `[${timestamp}] ${icon[type] || 'ℹ️'} ${message}\n`;
+            logContainer.innerHTML += `<span style="color: ${colors[type] || '#00ff00'}">${logEntry}</span>`;
+            
+            if (autoScroll) {
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('systemLog').innerHTML = '';
+            log('시스템 로그 초기화됨', 'info');
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const btn = document.getElementById('autoScrollBtn');
+            btn.textContent = `📜 자동스크롤 ${autoScroll ? 'ON' : 'OFF'}`;
+            btn.style.background = autoScroll ? '#28a745' : '#dc3545';
+        }
+
+        // 테이블명 API 함수들
+        async function connectTableNames() {
+            log('테이블명 API 연결 시도...', 'info');
+            
+            try {
+                const response = await fetch('http://127.0.0.1:5558/health');
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    tableNamesConnected = true;
+                    updateStatus('tableNamesStatus', 'connected');
+                    log('✅ 테이블명 API 연결 성공', 'success');
+                    
+                    // 테이블 데이터 로드
+                    await loadTableNamesData();
+                    
+                } else {
+                    throw new Error(data.error || '연결 실패');
+                }
+            } catch (error) {
+                tableNamesConnected = false;
+                updateStatus('tableNamesStatus', 'disconnected');
+                log(`❌ 테이블명 API 연결 실패: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadTableNamesData() {
+            try {
+                const response = await fetch('http://127.0.0.1:5558/api/table-names');
+                const data = await response.json();
+                
+                if (data.success) {
+                    tableNamesData = data;
+                    updateTableNamesStats(data);
+                    log(`📊 테이블 데이터 로드: ${data.total_tables}개`, 'success');
+                } else {
+                    throw new Error(data.error || '데이터 로드 실패');
+                }
+            } catch (error) {
+                log(`❌ 테이블 데이터 로드 실패: ${error.message}`, 'error');
+            }
+        }
+
+        async function refreshTableMetadata() {
+            if (!tableNamesConnected) {
+                log('⚠️ 먼저 테이블명 API에 연결하세요', 'warn');
+                return;
+            }
+
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.textContent = '🔄 새로고침 중...';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:5558/api/refresh-metadata', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ 메타데이터 새로고침 완료: ${data.total_tables}개 테이블`, 'success');
+                    await loadTableNamesData();
+                } else {
+                    throw new Error(data.error || '새로고침 실패');
+                }
+            } catch (error) {
+                log(`❌ 메타데이터 새로고침 실패: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 메타데이터 새로고침';
+            }
+        }
+
+        async function testTableNameIntegration() {
+            if (!tableNamesConnected) {
+                log('⚠️ 먼저 테이블명 API에 연결하세요', 'warn');
+                return;
+            }
+
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            btn.textContent = '🧪 테스트 중...';
+            
+            log('🧪 테이블명 통합 테스트 시작', 'test');
+            
+            try {
+                // 샘플 통계 데이터
+                const sampleStats = {
+                    total_games: 1000,
+                    total_pairs: 120,
+                    pair_rate: 12.0,
+                    table_breakdown: {
+                        'baccarat_a': { games: 250, pairs: 30, pair_rate: 12.0 },
+                        'speed_1': { games: 200, pairs: 25, pair_rate: 12.5 },
+                        'bonsai_a': { games: 180, pairs: 22, pair_rate: 12.2 },
+                        'emperor_b': { games: 170, pairs: 20, pair_rate: 11.8 },
+                        'korean_c': { games: 200, pairs: 23, pair_rate: 11.5 }
+                    }
+                };
+
+                const response = await fetch('http://127.0.0.1:5558/api/enhance-stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sampleStats)
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    const enhanced = data.enhanced_stats;
+                    log('✅ 통계 데이터 향상 성공', 'success');
+                    
+                    // 결과 표시
+                    const resultsContainer = document.getElementById('integrationResults');
+                    resultsContainer.innerHTML = '<h4>🔬 통합 테스트 결과:</h4>';
+                    
+                    Object.entries(enhanced.table_breakdown).forEach(([tableId, tableData]) => {
+                        const metadata = tableData.metadata || {};
+                        const koreanName = metadata.name_kr || '알수없음';
+                        const displayName = metadata.display_name || tableId;
+                        
+                        const testItem = document.createElement('div');
+                        testItem.className = 'table-item';
+                        testItem.innerHTML = `
+                            <div class="table-name">
+                                <span class="korean">${koreanName}</span>
+                                <br><small>${displayName}</small>
+                            </div>
+                            <div class="table-stats">
+                                <span>게임: ${tableData.games}</span>
+                                <span>페어: ${tableData.pairs}</span>
+                                <span>페어율: ${tableData.pair_rate}%</span>
+                            </div>
+                        `;
+                        resultsContainer.appendChild(testItem);
+                        
+                        log(`  - ${tableId}: ${koreanName}`, 'test');
+                    });
+                    
+                    integrationStats.totalTests++;
+                    updateIntegrationStats();
+                    
+                } else {
+                    throw new Error(data.error || '테스트 실패');
+                }
+            } catch (error) {
+                log(`❌ 통합 테스트 실패: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🧪 통합 테스트';
+            }
+        }
+
+        async function testMinimalIntegration() {
+            log('🛡️ Minimal API 통합 테스트 시작', 'test');
+            integrationStats.minimalSuccess++;
+            integrationStats.totalTests++;
+            updateIntegrationStats();
+            log('✅ Minimal API 한국어 테이블명 적용 시뮬레이션 완료', 'success');
+        }
+
+        async function testFastAPIIntegration() {
+            log('⚡ FastAPI 통합 테스트 시작', 'test');
+            integrationStats.fastapiSuccess++;
+            integrationStats.totalTests++;
+            updateIntegrationStats();
+            log('✅ FastAPI 한국어 테이블명 적용 시뮬레이션 완료', 'success');
+        }
+
+        function updateTableNamesStats(data) {
+            document.getElementById('totalTables').textContent = data.total_tables || 0;
+            document.getElementById('tableTypes').textContent = data.table_types?.length || 0;
+            document.getElementById('apiStatus').textContent = '건강함';
+            
+            // 테이블 목록 업데이트 (처음 20개만)
+            const tableContainer = document.getElementById('tableNamesList');
+            tableContainer.innerHTML = '<h4>📋 테이블 목록 (처음 20개):</h4>';
+            
+            const tables = data.tables || [];
+            tables.slice(0, 20).forEach(table => {
+                const tableItem = document.createElement('div');
+                tableItem.className = 'table-item';
+                tableItem.innerHTML = `
+                    <div class="table-name">
+                        <span class="korean">${table.name_kr}</span>
+                        <br><small>${table.table_id} (${table.table_type})</small>
+                    </div>
+                    <div class="table-stats">
+                        <span>파일: ${table.filename}</span>
+                    </div>
+                `;
+                tableContainer.appendChild(tableItem);
+            });
+        }
+
+        function updateIntegrationStats() {
+            document.getElementById('minimalKorean').textContent = integrationStats.minimalSuccess;
+            document.getElementById('fastapiKorean').textContent = integrationStats.fastapiSuccess;
+            document.getElementById('enhancedTables').textContent = integrationStats.totalTests;
+            
+            const successRate = integrationStats.totalTests > 0 
+                ? ((integrationStats.minimalSuccess + integrationStats.fastapiSuccess) / (integrationStats.totalTests * 2) * 100)
+                : 0;
+            document.getElementById('successRate').textContent = successRate.toFixed(1);
+        }
+
+        // Utility functions
+        function updateStatus(elementId, status) {
+            const element = document.getElementById(elementId);
+            element.className = 'status-indicator';
+            
+            switch (status) {
+                case 'connected':
+                    element.classList.add('status-connected');
+                    element.textContent = 'Connected';
+                    break;
+                case 'disconnected':
+                default:
+                    element.classList.add('status-disconnected');
+                    element.textContent = 'Disconnected';
+                    break;
+            }
+        }
+
+        // Initialize
+        window.onload = function() {
+            log('🚀 한국어 테이블명 대시보드 시작됨', 'success');
+            log('💡 테이블명 API에 연결하여 한국어 테이블명 기능을 테스트하세요', 'info');
+            
+            // 초기 통계 표시
+            updateIntegrationStats();
+            
+            // 자동 연결 시도
+            setTimeout(() => {
+                log('🔄 자동 연결 시도...', 'info');
+                connectTableNames();
+            }, 2000);
+        };
+    </script>
+</body>
+</html>

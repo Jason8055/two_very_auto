@@ -1,0 +1,26 @@
+{
+  "email": {
+    "enabled": false,
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "username": "",
+    "password": "",
+    "from_email": "",
+    "to_emails": []
+  },
+  "telegram": {
+    "enabled": false,
+    "bot_token": "",
+    "chat_ids": []
+  },
+  "web": {
+    "enabled": true,
+    "sound_enabled": true,
+    "desktop_notifications": true
+  },
+  "general": {
+    "max_notifications_per_hour": 20,
+    "min_interval_seconds": 30,
+    "enable_cooldown": true
+  }
+}

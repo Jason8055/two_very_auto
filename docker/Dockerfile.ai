@@ -1,0 +1,58 @@
+# Two Very Auto v3.0 - AI 엔진 컨테이너
+FROM python:3.11-slim
+
+# 메타데이터
+LABEL maintainer="Two Very Auto Team"
+LABEL version="3.0"
+LABEL description="Two Very Auto AI Engine Container"
+
+# 시스템 패키지 업데이트 및 AI/ML 관련 패키지 설치
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    gfortran \
+    libopenblas-dev \
+    liblapack-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 작업 디렉터리 설정
+WORKDIR /app
+
+# Python 의존성 복사 및 설치
+COPY python/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# AI/ML 전용 라이브러리 설치
+RUN pip install --no-cache-dir \
+    tensorflow>=2.13.0 \
+    torch \
+    joblib \
+    xgboost
+
+# 애플리케이션 코드 복사
+COPY python/ .
+
+# AI 모델 디렉터리 생성
+RUN mkdir -p /app/models /app/data /app/logs
+
+# 권한 설정
+RUN chmod +x *.py
+
+# 포트 노출 (AI API 서비스)
+EXPOSE 5001
+
+# 헬스체크 설정
+HEALTHCHECK --interval=60s --timeout=30s --start-period=10s --retries=3 \
+    CMD python -c "from advanced_ai_engine_v2 import get_advanced_ai_engine; engine = get_advanced_ai_engine(); print('AI Engine OK')" || exit 1
+
+# 환경 변수 설정
+ENV PYTHONUNBUFFERED=1
+ENV TF_CPP_MIN_LOG_LEVEL=2
+ENV CUDA_VISIBLE_DEVICES=-1
+
+# 볼륨 마운트 포인트
+VOLUME ["/app/models", "/app/data", "/app/logs"]
+
+# AI 엔진 서비스 시작
+CMD ["python", "-c", "from advanced_ai_engine_v2 import get_advanced_ai_engine; import time; ai = get_advanced_ai_engine(); print('AI Engine Ready'); time.sleep(31536000)"]

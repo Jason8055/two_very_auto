@@ -1,0 +1,625 @@
+# Two Very Auto v3.0 - Kubernetes Production Deployment
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: two-very-auto-prod
+  labels:
+    app: two-very-auto
+    environment: production
+
+---
+# ConfigMap for application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: two-very-auto-config
+  namespace: two-very-auto-prod
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "WARNING"
+  WEBSOCKET_PORT: "5001"
+  API_PORT: "8080"
+  REDIS_URL: "redis://redis-service:6379/0"
+  CORS_ORIGINS: '["https://two-very-auto.com"]'
+  SSL_ENABLED: "true"
+  MONITORING_ENABLED: "true"
+  RATE_LIMITING: "true"
+  BACKUP_ENABLED: "true"
+  BACKUP_SCHEDULE: "0 2 * * *"
+
+---
+# Secret for sensitive data
+apiVersion: v1
+kind: Secret
+metadata:
+  name: two-very-auto-secrets
+  namespace: two-very-auto-prod
+type: Opaque
+data:
+  SECRET_KEY: # Base64 encoded secret key
+  DATABASE_URL: # Base64 encoded database connection string
+  AWS_ACCESS_KEY_ID: # Base64 encoded AWS access key
+  AWS_SECRET_ACCESS_KEY: # Base64 encoded AWS secret key
+  SMTP_PASSWORD: # Base64 encoded SMTP password
+
+---
+# Redis Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: two-very-auto-prod
+  labels:
+    app: redis
+    component: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+        component: cache
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        command: ["redis-server"]
+        args: ["--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-pvc
+
+---
+# Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: two-very-auto-prod
+  labels:
+    app: redis
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+  type: ClusterIP
+
+---
+# Redis PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: two-very-auto-prod
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: gp2
+
+---
+# PostgreSQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: two-very-auto-prod
+  labels:
+    app: postgres
+    component: database
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+        component: database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_DB
+          value: "two_very_auto"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: two-very-auto-secrets
+              key: POSTGRES_PASSWORD
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+        ports:
+        - containerPort: 5432
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+
+---
+# PostgreSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: two-very-auto-prod
+  labels:
+    app: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP
+
+---
+# PostgreSQL PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: two-very-auto-prod
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: gp2
+
+---
+# Web Application Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: two-very-auto-web
+  namespace: two-very-auto-prod
+  labels:
+    app: two-very-auto
+    component: web
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: two-very-auto
+      component: web
+  template:
+    metadata:
+      labels:
+        app: two-very-auto
+        component: web
+    spec:
+      containers:
+      - name: web
+        image: ghcr.io/your-org/two-very-auto-web:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 5001
+          name: websocket
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: two-very-auto-config
+              key: ENVIRONMENT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: two-very-auto-config
+              key: LOG_LEVEL
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: two-very-auto-secrets
+              key: SECRET_KEY
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: two-very-auto-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: two-very-auto-config
+              key: REDIS_URL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: app-logs
+          mountPath: /app/logs
+      volumes:
+      - name: app-logs
+        emptyDir: {}
+
+---
+# AI Engine Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: two-very-auto-ai
+  namespace: two-very-auto-prod
+  labels:
+    app: two-very-auto
+    component: ai-engine
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: two-very-auto
+      component: ai-engine
+  template:
+    metadata:
+      labels:
+        app: two-very-auto
+        component: ai-engine
+    spec:
+      containers:
+      - name: ai-engine
+        image: ghcr.io/your-org/two-very-auto-ai:latest
+        ports:
+        - containerPort: 5001
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: two-very-auto-config
+              key: ENVIRONMENT
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: two-very-auto-config
+              key: REDIS_URL
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1000m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+---
+# Web Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: two-very-auto-web-service
+  namespace: two-very-auto-prod
+  labels:
+    app: two-very-auto
+    component: web
+spec:
+  selector:
+    app: two-very-auto
+    component: web
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  - name: websocket
+    port: 5001
+    targetPort: 5001
+  type: ClusterIP
+
+---
+# AI Engine Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: two-very-auto-ai-service
+  namespace: two-very-auto-prod
+  labels:
+    app: two-very-auto
+    component: ai-engine
+spec:
+  selector:
+    app: two-very-auto
+    component: ai-engine
+  ports:
+  - port: 5001
+    targetPort: 5001
+  type: ClusterIP
+
+---
+# Ingress for HTTPS
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: two-very-auto-ingress
+  namespace: two-very-auto-prod
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/websocket-services: "two-very-auto-web-service"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  tls:
+  - hosts:
+    - two-very-auto.com
+    - www.two-very-auto.com
+    secretName: two-very-auto-tls
+  rules:
+  - host: two-very-auto.com
+    http:
+      paths:
+      - path: /socket.io
+        pathType: Prefix
+        backend:
+          service:
+            name: two-very-auto-web-service
+            port:
+              number: 5001
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: two-very-auto-web-service
+            port:
+              number: 80
+  - host: www.two-very-auto.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: two-very-auto-web-service
+            port:
+              number: 80
+
+---
+# Horizontal Pod Autoscaler for Web
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: two-very-auto-web-hpa
+  namespace: two-very-auto-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: two-very-auto-web
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+
+---
+# Horizontal Pod Autoscaler for AI Engine
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: two-very-auto-ai-hpa
+  namespace: two-very-auto-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: two-very-auto-ai
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 85
+
+---
+# Network Policy for Security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: two-very-auto-network-policy
+  namespace: two-very-auto-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: two-very-auto
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 5001
+  - from:
+    - podSelector:
+        matchLabels:
+          app: two-very-auto
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 5001
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to: [] # Allow external traffic for APIs
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+
+---
+# Pod Disruption Budget for Web
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: two-very-auto-web-pdb
+  namespace: two-very-auto-prod
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: two-very-auto
+      component: web
+
+---
+# Pod Disruption Budget for AI Engine
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: two-very-auto-ai-pdb
+  namespace: two-very-auto-prod
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: two-very-auto
+      component: ai-engine

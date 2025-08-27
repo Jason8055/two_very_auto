@@ -1,0 +1,3 @@
+[16:00:27] [encodedShoeState] gameCount=2
+[16:00:27] {"id":"1755673227254-8771","type":"baccarat.encodedShoeState","args":{"stats":{"gameCount":2,"playerWins":0,"bankerWins":2,"ties":0,"playerPairs":0,"bankerPairs":0},"history":"B=&o","history_v2":[{"winner":"Banker","natural":true,"playerScore":5,"bankerScore":9},{"winner":"Banker","playerScore":4,"bankerScore":7}],"tableId":"rep5ca4ynyjl7wdw"},"time":1755673227254}
+[16:00:27] [encodedShoeState] history=2

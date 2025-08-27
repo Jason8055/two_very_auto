@@ -1,0 +1,32 @@
+{
+  "casinos": [
+    {
+      "id": "main_casino",
+      "config": {
+        "name": "메인 카지노",
+        "server_ip": "127.0.0.1",
+        "port": 8080,
+        "protocol": "websocket",
+        "auto_connect": true,
+        "priority": 1
+      }
+    },
+    {
+      "id": "backup_casino",
+      "config": {
+        "name": "백업 카지노",
+        "server_ip": "127.0.0.1",
+        "port": 8081,
+        "protocol": "websocket",
+        "auto_connect": false,
+        "priority": 2
+      }
+    }
+  ],
+  "global_settings": {
+    "max_concurrent_casinos": 5,
+    "data_sync_interval": 30,
+    "auto_failover": true,
+    "cross_casino_analysis": true
+  }
+}

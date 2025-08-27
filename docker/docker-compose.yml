@@ -1,0 +1,189 @@
+# Two Very Auto v3.0 - Docker Compose 구성
+version: '3.8'
+
+services:
+  # 웹 서버 서비스
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web
+    container_name: two-very-auto-web
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - TWO_AUTO_DB_PATH=/app/data/baccarat_monitor_pwa_v3.db
+      - TWO_AUTO_HOST=0.0.0.0
+      - TWO_AUTO_PORT=5000
+    volumes:
+      - web_data:/app/data
+      - web_logs:/app/logs
+    networks:
+      - two-auto-network
+    depends_on:
+      - redis
+      - ai-engine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # AI 엔진 서비스
+  ai-engine:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ai
+    container_name: two-very-auto-ai
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TF_CPP_MIN_LOG_LEVEL=2
+      - TWO_AUTO_MODEL_PATH=/app/models
+    volumes:
+      - ai_models:/app/models
+      - ai_data:/app/data
+      - ai_logs:/app/logs
+    networks:
+      - two-auto-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.5'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  # Redis 캐시 서비스
+  redis:
+    image: redis:7-alpine
+    container_name: two-very-auto-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - two-auto-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx 리버스 프록시
+  nginx:
+    image: nginx:alpine
+    container_name: two-very-auto-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_logs:/var/log/nginx
+      - ssl_certs:/etc/ssl/certs
+    networks:
+      - two-auto-network
+    depends_on:
+      - web
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL 데이터베이스 (고급 분석용)
+  postgres:
+    image: postgres:15-alpine
+    container_name: two-very-auto-db
+    environment:
+      - POSTGRES_DB=two_very_auto
+      - POSTGRES_USER=two_auto_user
+      - POSTGRES_PASSWORD=secure_password_2025
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - two-auto-network
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U two_auto_user -d two_very_auto"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus 모니터링
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: two-very-auto-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - two-auto-network
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+  # Grafana 대시보드
+  grafana:
+    image: grafana/grafana:latest
+    container_name: two-very-auto-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin2025
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - two-auto-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+# 네트워크 정의
+networks:
+  two-auto-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 볼륨 정의
+volumes:
+  web_data:
+    driver: local
+  web_logs:
+    driver: local
+  ai_models:
+    driver: local
+  ai_data:
+    driver: local
+  ai_logs:
+    driver: local
+  redis_data:
+    driver: local
+  nginx_logs:
+    driver: local
+  ssl_certs:
+    driver: local
+  postgres_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

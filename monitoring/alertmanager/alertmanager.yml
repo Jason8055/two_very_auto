@@ -1,0 +1,225 @@
+# AlertManager Configuration for Two Very Auto v3.0
+global:
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alerts@two-very-auto.com'
+  smtp_auth_username: 'your-email@gmail.com'
+  smtp_auth_password: 'your-app-password'
+  
+  # Slack 전역 설정
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+
+# 알림 템플릿
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# 라우팅 규칙
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  receiver: 'default-receiver'
+  
+  routes:
+    # 긴급 알림 - 즉시 전송
+    - match:
+        severity: emergency
+      receiver: 'emergency-alerts'
+      group_wait: 0s
+      repeat_interval: 5m
+      
+    # 중요 알림 - 우선 처리
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 30s
+      repeat_interval: 30m
+      
+    # 경고 알림 - 일반 처리
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      group_wait: 2m
+      repeat_interval: 2h
+      
+    # 시스템 관련 알림
+    - match:
+        category: system
+      receiver: 'system-alerts'
+      
+    # 비즈니스 관련 알림
+    - match:
+        category: business
+      receiver: 'business-alerts'
+      
+    # 보안 관련 알림
+    - match:
+        category: security
+      receiver: 'security-alerts'
+      group_wait: 10s
+      repeat_interval: 15m
+
+# 알림 수신자 설정
+receivers:
+  # 기본 수신자
+  - name: 'default-receiver'
+    email_configs:
+      - to: 'admin@two-very-auto.com'
+        subject: '[Two Very Auto] {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Instance: {{ .Labels.instance }}
+          Time: {{ .StartsAt }}
+          {{ end }}
+        html: |
+          <html>
+          <body>
+          <h2>🚨 Two Very Auto Alert</h2>
+          <table border="1" style="border-collapse: collapse;">
+          <tr><th>Alert</th><th>Severity</th><th>Instance</th><th>Time</th></tr>
+          {{ range .Alerts }}
+          <tr>
+            <td>{{ .Annotations.summary }}</td>
+            <td>{{ .Labels.severity }}</td>
+            <td>{{ .Labels.instance }}</td>
+            <td>{{ .StartsAt }}</td>
+          </tr>
+          {{ end }}
+          </table>
+          </body>
+          </html>
+
+  # 긴급 알림 - 모든 채널
+  - name: 'emergency-alerts'
+    email_configs:
+      - to: 'admin@two-very-auto.com, ops@two-very-auto.com'
+        subject: '🚨 [EMERGENCY] Two Very Auto - {{ .GroupLabels.alertname }}'
+        body: |
+          EMERGENCY ALERT!
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Instance: {{ .Labels.instance }}
+          Time: {{ .StartsAt }}
+          
+          Immediate action required!
+          {{ end }}
+    
+    slack_configs:
+      - channel: '#alerts-emergency'
+        color: 'danger'
+        title: '🚨 EMERGENCY Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        fields:
+          - title: 'Severity'
+            value: '{{ .CommonLabels.severity }}'
+            short: true
+          - title: 'Instance'
+            value: '{{ .CommonLabels.instance }}'
+            short: true
+    
+    webhook_configs:
+      - url: 'https://your-webhook-endpoint.com/emergency'
+        send_resolved: true
+
+  # 중요 알림
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'admin@two-very-auto.com'
+        subject: '🔥 [CRITICAL] Two Very Auto - {{ .GroupLabels.alertname }}'
+    
+    slack_configs:
+      - channel: '#alerts-critical'
+        color: 'danger'
+        title: '🔥 Critical Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+
+  # 경고 알림
+  - name: 'warning-alerts'
+    email_configs:
+      - to: 'admin@two-very-auto.com'
+        subject: '⚠️ [WARNING] Two Very Auto - {{ .GroupLabels.alertname }}'
+    
+    slack_configs:
+      - channel: '#alerts-warning'
+        color: 'warning'
+        title: '⚠️ Warning Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+
+  # 시스템 알림
+  - name: 'system-alerts'
+    email_configs:
+      - to: 'ops@two-very-auto.com'
+        subject: '[SYSTEM] Two Very Auto - {{ .GroupLabels.alertname }}'
+    
+    slack_configs:
+      - channel: '#system-alerts'
+        color: 'warning'
+        title: '🖥️ System Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+
+  # 비즈니스 알림
+  - name: 'business-alerts'
+    email_configs:
+      - to: 'business@two-very-auto.com'
+        subject: '[BUSINESS] Two Very Auto - {{ .GroupLabels.alertname }}'
+    
+    slack_configs:
+      - channel: '#business-alerts'
+        color: 'good'
+        title: '📊 Business Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+
+  # 보안 알림
+  - name: 'security-alerts'
+    email_configs:
+      - to: 'security@two-very-auto.com'
+        subject: '🔐 [SECURITY] Two Very Auto - {{ .GroupLabels.alertname }}'
+    
+    slack_configs:
+      - channel: '#security-alerts'
+        color: 'danger'
+        title: '🔐 Security Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+    
+    webhook_configs:
+      - url: 'https://your-siem-system.com/alerts'
+        send_resolved: true
+
+# 억제 규칙 - 중복 알림 방지
+inhibit_rules:
+  # 노드가 다운되면 해당 노드의 다른 알림 억제
+  - source_match:
+      alertname: 'NodeDown'
+    target_match_re:
+      instance: '.*'
+    equal: ['instance']
+  
+  # 중요 알림이 있으면 경고 알림 억제
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+  
+  # 긴급 알림이 있으면 모든 하위 알림 억제
+  - source_match:
+      severity: 'emergency'
+    target_match_re:
+      severity: 'critical|warning|info'
+    equal: ['alertname', 'instance']
+
+# 알림 그룹화 설정
+group_by_files: []
+
+# 알림 상태 유지 기간
+data_retention: '120h'  # 5일
+
+# 로그 설정
+log_level: 'info'
+log_format: 'json'

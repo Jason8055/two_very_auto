@@ -1,0 +1,93 @@
+# Two Very Auto v3.0 - Docker 제외 파일
+
+# Python 관련
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 가상환경
+venv/
+ENV/
+env/
+.venv
+
+# IDE 및 에디터
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS 관련
+.DS_Store
+Thumbs.db
+*.log
+
+# 데이터베이스 파일
+*.db
+*.sqlite3
+
+# 백업 파일
+*.bak
+*.backup
+
+# 테스트 관련
+.coverage
+.pytest_cache/
+htmlcov/
+
+# 문서
+docs/
+*.md
+!README.md
+
+# 개발 전용 파일
+test_*.py
+*_test.py
+development/
+testing/
+
+# 임시 파일
+tmp/
+temp/
+*.tmp
+
+# 로그 파일
+logs/
+*.log
+
+# Chrome 브라우저 데이터 (크기가 큰 파일)
+chrome_data/
+
+# 모델 파일 (용량이 큰 경우)
+*.h5
+*.pkl
+models/*.h5
+models/*.pkl
+
+# Git 관련
+.git/
+.gitignore
+
+# Docker 관련
+Dockerfile*
+docker-compose*.yml
+.dockerignore

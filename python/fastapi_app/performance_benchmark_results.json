@@ -1,0 +1,22 @@
+{
+  "demo_api_results": {
+    "fastapi": {
+      "error": "FastAPI server not available"
+    },
+    "flask": {
+      "error": "Flask server not available"
+    }
+  },
+  "comparison": {
+    "fastapi_status": "error",
+    "flask_status": "error",
+    "fastapi_error": "FastAPI server not available",
+    "flask_error": "Flask server not available"
+  },
+  "timestamp": "2025-08-26 12:22:14",
+  "test_config": {
+    "concurrent_requests": 10,
+    "max_workers": 3,
+    "timeout": 10
+  }
+}

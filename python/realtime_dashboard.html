@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two Very Auto - 실시간 대시보드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .system-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 5px solid #007bff;
+        }
+        
+        .system-panel.fastapi {
+            border-left-color: #28a745;
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f8f9fa;
+        }
+        
+        .panel-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .status-indicator {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .status-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .status-connecting {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+            display: block;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .table-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .table-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #17a2b8;
+            transition: all 0.3s ease;
+        }
+        
+        .table-item:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+        
+        .table-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .table-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+        
+        .btn.success {
+            background: #28a745;
+        }
+        
+        .btn.success:hover {
+            background: #1e7e34;
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .log-panel {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 5px solid #dc3545;
+        }
+        
+        .log-container {
+            background: #000;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .pair-alert {
+            animation: pulse 2s infinite;
+            color: #ff6b6b !important;
+            font-weight: bold;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .loading {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .comparison-panel {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 5px solid #ffc107;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            text-align: center;
+        }
+        
+        .comparison-item {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .comparison-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Minimal API Panel -->
+        <div class="system-panel">
+            <div class="panel-header">
+                <div class="panel-title">🛡️ Minimal API (Flask)</div>
+                <div class="status-indicator" id="minimalStatus">Disconnected</div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="connectMinimal()">🔗 연결</button>
+                <button class="btn success" onclick="testMinimal()" id="minimalTestBtn">🎲 데모 테스트</button>
+            </div>
+            
+            <div class="stats-grid" id="minimalStats">
+                <div class="stat-card">
+                    <span class="stat-value" id="minimalGames">-</span>
+                    <div class="stat-label">총 게임</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="minimalPairs">-</span>
+                    <div class="stat-label">총 페어</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="minimalRate">-</span>
+                    <div class="stat-label">페어율 (%)</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="minimalTables">-</span>
+                    <div class="stat-label">활성 테이블</div>
+                </div>
+            </div>
+            
+            <div class="table-list" id="minimalTables"></div>
+        </div>
+        
+        <!-- FastAPI Panel -->
+        <div class="system-panel fastapi">
+            <div class="panel-header">
+                <div class="panel-title">⚡ FastAPI (AsyncIO)</div>
+                <div class="status-indicator" id="fastapiStatus">Disconnected</div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="connectFastAPI()">🌐 WebSocket 연결</button>
+                <button class="btn success" onclick="testFastAPI()" id="fastapiTestBtn">🎲 데모 테스트</button>
+            </div>
+            
+            <div class="stats-grid" id="fastapiStats">
+                <div class="stat-card">
+                    <span class="stat-value" id="fastapiGames">-</span>
+                    <div class="stat-label">총 게임</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="fastapiPairs">-</span>
+                    <div class="stat-label">총 페어</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="fastapiRate">-</span>
+                    <div class="stat-label">페어율 (%)</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="fastapiConnections">-</span>
+                    <div class="stat-label">WebSocket 연결</div>
+                </div>
+            </div>
+            
+            <div class="table-list" id="fastapiTables"></div>
+        </div>
+        
+        <!-- Comparison Panel -->
+        <div class="comparison-panel">
+            <div class="panel-header">
+                <div class="panel-title">📊 시스템 비교 분석</div>
+                <button class="btn" onclick="updateComparison()">🔄 비교 업데이트</button>
+            </div>
+            
+            <div class="comparison-grid">
+                <div class="comparison-item">
+                    <div class="comparison-value" id="performanceComparison">-</div>
+                    <div>성능 비교</div>
+                    <small id="performanceDetail">-</small>
+                </div>
+                <div class="comparison-item">
+                    <div class="comparison-value" id="reliabilityComparison">-</div>
+                    <div>안정성 비교</div>
+                    <small id="reliabilityDetail">-</small>
+                </div>
+                <div class="comparison-item">
+                    <div class="comparison-value" id="featureComparison">-</div>
+                    <div>기능 비교</div>
+                    <small id="featureDetail">-</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Log Panel -->
+        <div class="log-panel">
+            <div class="panel-header">
+                <div class="panel-title">📝 실시간 시스템 로그</div>
+                <div class="controls">
+                    <button class="btn" onclick="clearLogs()">🧹 로그 지우기</button>
+                    <button class="btn" onclick="toggleAutoScroll()" id="autoScrollBtn">📜 자동스크롤 ON</button>
+                </div>
+            </div>
+            <div class="log-container" id="systemLog"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let wsConnection = null;
+        let autoScroll = true;
+        let minimalConnected = false;
+        let fastapiConnected = false;
+        let lastStats = {
+            minimal: null,
+            fastapi: null
+        };
+
+        // Logging function
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('systemLog');
+            const timestamp = new Date().toLocaleTimeString('ko-KR');
+            
+            const colors = {
+                info: '#00ff00',
+                warn: '#ffff00', 
+                error: '#ff0000',
+                success: '#00ff00',
+                pair: '#ff6b6b'
+            };
+            
+            const icon = {
+                info: 'ℹ️',
+                warn: '⚠️',
+                error: '❌',
+                success: '✅',
+                pair: '🎯'
+            };
+            
+            const logEntry = `[${timestamp}] ${icon[type] || 'ℹ️'} ${message}\n`;
+            logContainer.innerHTML += `<span style="color: ${colors[type] || '#00ff00'}">${logEntry}</span>`;
+            
+            if (autoScroll) {
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            // Pair alert animation
+            if (type === 'pair') {
+                logContainer.lastElementChild.classList.add('pair-alert');
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('systemLog').innerHTML = '';
+            log('시스템 로그 초기화됨', 'info');
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const btn = document.getElementById('autoScrollBtn');
+            btn.textContent = `📜 자동스크롤 ${autoScroll ? 'ON' : 'OFF'}`;
+            btn.style.background = autoScroll ? '#28a745' : '#dc3545';
+        }
+
+        // Minimal API functions
+        async function connectMinimal() {
+            log('Minimal API 연결 시도...', 'info');
+            
+            try {
+                const response = await fetch('http://127.0.0.1:5557/api/minimal-stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    minimalConnected = true;
+                    updateStatus('minimalStatus', 'connected');
+                    updateMinimalStats(data.stats);
+                    log('✅ Minimal API 연결 성공', 'success');
+                    
+                    // 주기적 업데이트 시작
+                    setInterval(updateMinimalStats, 10000);
+                } else {
+                    throw new Error(data.error || '연결 실패');
+                }
+            } catch (error) {
+                minimalConnected = false;
+                updateStatus('minimalStatus', 'disconnected');
+                log(`❌ Minimal API 연결 실패: ${error.message}`, 'error');
+            }
+        }
+
+        async function testMinimal() {
+            if (!minimalConnected) {
+                log('⚠️ Minimal API에 먼저 연결하세요', 'warn');
+                return;
+            }
+
+            const btn = document.getElementById('minimalTestBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading">⏳</span> 처리중...';
+            
+            log('🎲 Minimal API 데모 테스트 시작', 'info');
+
+            try {
+                const response = await fetch('http://127.0.0.1:5557/api/minimal-demo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    log(`✅ Minimal 데모 성공: ${data.games_added}게임, ${data.pairs_found}페어`, 'success');
+                    
+                    if (data.pairs_found > 0) {
+                        log(`🎯 페어 발견! ${data.pairs_found}개의 페어가 생성됨`, 'pair');
+                    }
+                    
+                    // 통계 업데이트
+                    setTimeout(async () => {
+                        const statsResponse = await fetch('http://127.0.0.1:5557/api/minimal-stats');
+                        const statsData = await statsResponse.json();
+                        if (statsData.success) {
+                            updateMinimalStats(statsData.stats);
+                        }
+                    }, 1000);
+                } else {
+                    log(`❌ Minimal 데모 실패: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Minimal 데모 오류: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎲 데모 테스트';
+            }
+        }
+
+        function updateMinimalStats(stats) {
+            lastStats.minimal = stats;
+            
+            document.getElementById('minimalGames').textContent = stats.total_games || 0;
+            document.getElementById('minimalPairs').textContent = stats.total_pairs || 0;
+            document.getElementById('minimalRate').textContent = (stats.pair_rate || 0).toFixed(1);
+            document.getElementById('minimalTables').textContent = stats.active_tables || 0;
+            
+            // 테이블 목록 업데이트
+            const tableContainer = document.getElementById('minimalTables');
+            tableContainer.innerHTML = '';
+            
+            if (stats.table_breakdown) {
+                Object.entries(stats.table_breakdown).forEach(([tableName, tableData]) => {
+                    const tableItem = document.createElement('div');
+                    tableItem.className = 'table-item';
+                    tableItem.innerHTML = `
+                        <div class="table-name">${tableName} (${tableData.metadata?.name_kr || '알수없음'})</div>
+                        <div class="table-stats">
+                            <span>게임: ${tableData.games}</span>
+                            <span>페어: ${tableData.pairs}</span>
+                            <span>페어율: ${tableData.pair_rate}%</span>
+                        </div>
+                    `;
+                    tableContainer.appendChild(tableItem);
+                });
+            }
+        }
+
+        // FastAPI functions
+        async function connectFastAPI() {
+            log('FastAPI WebSocket 연결 시도...', 'info');
+            
+            if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+                wsConnection.close();
+                log('기존 WebSocket 연결 종료', 'info');
+            }
+            
+            try {
+                const clientId = 'dashboard_' + Math.random().toString(36).substring(7);
+                wsConnection = new WebSocket(`ws://127.0.0.1:8001/ws/${clientId}`);
+                
+                wsConnection.onopen = function(event) {
+                    fastapiConnected = true;
+                    updateStatus('fastapiStatus', 'connected');
+                    log('✅ FastAPI WebSocket 연결 성공', 'success');
+                };
+                
+                wsConnection.onmessage = function(event) {
+                    const message = JSON.parse(event.data);
+                    handleWebSocketMessage(message);
+                };
+                
+                wsConnection.onclose = function(event) {
+                    fastapiConnected = false;
+                    updateStatus('fastapiStatus', 'disconnected');
+                    log('🔌 FastAPI WebSocket 연결 종료', 'warn');
+                };
+                
+                wsConnection.onerror = function(error) {
+                    log(`❌ FastAPI WebSocket 오류: ${error}`, 'error');
+                };
+                
+            } catch (error) {
+                log(`❌ FastAPI 연결 실패: ${error.message}`, 'error');
+            }
+        }
+
+        async function testFastAPI() {
+            if (!fastapiConnected) {
+                log('⚠️ FastAPI에 먼저 연결하세요', 'warn');
+                return;
+            }
+
+            const btn = document.getElementById('fastapiTestBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading">⏳</span> 처리중...';
+            
+            log('🎲 FastAPI 데모 테스트 시작', 'info');
+
+            try {
+                const response = await fetch('http://127.0.0.1:8001/api/demo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ game_count: 15 })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    log(`✅ FastAPI 데모 성공: ${data.games_added}게임, ${data.pairs_found}페어`, 'success');
+                    
+                    if (data.pairs_found > 0) {
+                        log(`🎯 페어 발견! ${data.pairs_found}개의 페어가 생성됨`, 'pair');
+                    }
+                    
+                    // WebSocket을 통해 실시간 업데이트됨
+                } else {
+                    log(`❌ FastAPI 데모 실패: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ FastAPI 데모 오류: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎲 데모 테스트';
+            }
+        }
+
+        function handleWebSocketMessage(message) {
+            log(`📨 WebSocket: ${message.type}`, 'info');
+            
+            switch (message.type) {
+                case 'init':
+                    updateFastapiStats(message.data);
+                    log('📊 FastAPI 초기 데이터 로드됨', 'info');
+                    break;
+                    
+                case 'demo_update':
+                    log(`🎲 실시간 데모 업데이트: ${message.data.message}`, 'success');
+                    if (message.data.pairs_found > 0) {
+                        log(`🎯 실시간 페어 감지! ${message.data.pairs_found}개`, 'pair');
+                    }
+                    break;
+                    
+                case 'stats_update':
+                    updateFastapiStats(message.data);
+                    log('📊 FastAPI 통계 자동 업데이트', 'info');
+                    break;
+                    
+                case 'packet_update':
+                    log(`📦 패킷 처리 완료: ${message.data.message}`, 'success');
+                    if (message.data.pairs_found > 0) {
+                        log(`🎯 패킷에서 페어 발견! ${message.data.pairs_found}개 (소스: ${message.data.source})`, 'pair');
+                    }
+                    break;
+                    
+                default:
+                    log(`📨 WebSocket 메시지: ${JSON.stringify(message.data)}`, 'info');
+            }
+        }
+
+        function updateFastapiStats(stats) {
+            lastStats.fastapi = stats;
+            
+            document.getElementById('fastapiGames').textContent = stats.total_games || 0;
+            document.getElementById('fastapiPairs').textContent = stats.total_pairs || 0;
+            document.getElementById('fastapiRate').textContent = (stats.pair_rate || 0).toFixed(1);
+            
+            // WebSocket 연결 수 업데이트
+            fetch('http://127.0.0.1:8001/api/websocket/stats')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('fastapiConnections').textContent = 
+                            data.websocket_stats.active_connections || 0;
+                    }
+                })
+                .catch(() => {});
+            
+            // 테이블 목록 업데이트
+            const tableContainer = document.getElementById('fastapiTables');
+            tableContainer.innerHTML = '';
+            
+            if (stats.table_breakdown) {
+                Object.entries(stats.table_breakdown).forEach(([tableName, tableData]) => {
+                    const tableItem = document.createElement('div');
+                    tableItem.className = 'table-item';
+                    tableItem.innerHTML = `
+                        <div class="table-name">${tableName}</div>
+                        <div class="table-stats">
+                            <span>게임: ${tableData.games}</span>
+                            <span>페어: ${tableData.pairs}</span>
+                            <span>페어율: ${tableData.pair_rate}%</span>
+                        </div>
+                    `;
+                    tableContainer.appendChild(tableItem);
+                });
+            }
+        }
+
+        // Comparison functions
+        function updateComparison() {
+            if (!lastStats.minimal || !lastStats.fastapi) {
+                log('⚠️ 두 시스템 모두 연결 후 비교 가능합니다', 'warn');
+                return;
+            }
+
+            log('📊 시스템 성능 비교 분석 시작', 'info');
+
+            // 성능 비교 (처리량 기준)
+            const minimalGames = lastStats.minimal.total_games || 0;
+            const fastapiGames = lastStats.fastapi.total_games || 0;
+            
+            let performanceWinner = 'Similar';
+            let performanceDetail = '비슷한 처리량';
+            
+            if (fastapiGames > minimalGames * 1.2) {
+                performanceWinner = 'FastAPI';
+                performanceDetail = `${((fastapiGames/minimalGames - 1) * 100).toFixed(0)}% 더 빠름`;
+            } else if (minimalGames > fastapiGames * 1.2) {
+                performanceWinner = 'Minimal';
+                performanceDetail = `${((minimalGames/fastapiGames - 1) * 100).toFixed(0)}% 더 빠름`;
+            }
+
+            // 안정성 비교 (연결 상태 기준)
+            let reliabilityWinner = 'Similar';
+            let reliabilityDetail = '두 시스템 모두 안정적';
+            
+            if (fastapiConnected && !minimalConnected) {
+                reliabilityWinner = 'FastAPI';
+                reliabilityDetail = 'WebSocket 실시간 연결';
+            } else if (minimalConnected && !fastapiConnected) {
+                reliabilityWinner = 'Minimal';
+                reliabilityDetail = 'HTTP 안정적 연결';
+            }
+
+            // 기능 비교
+            const fastapiFeatures = fastapiConnected ? ['WebSocket', 'AsyncIO', 'Auto-Docs'] : [];
+            const minimalFeatures = minimalConnected ? ['HTTP-API', 'Safe-Mode'] : [];
+            
+            let featureWinner = 'FastAPI';
+            let featureDetail = `${fastapiFeatures.length} vs ${minimalFeatures.length} 기능`;
+
+            // 업데이트
+            document.getElementById('performanceComparison').textContent = performanceWinner;
+            document.getElementById('performanceDetail').textContent = performanceDetail;
+            
+            document.getElementById('reliabilityComparison').textContent = reliabilityWinner;
+            document.getElementById('reliabilityDetail').textContent = reliabilityDetail;
+            
+            document.getElementById('featureComparison').textContent = featureWinner;
+            document.getElementById('featureDetail').textContent = featureDetail;
+
+            log('✅ 시스템 비교 분석 완료', 'success');
+        }
+
+        // Utility functions
+        function updateStatus(elementId, status) {
+            const element = document.getElementById(elementId);
+            element.className = 'status-indicator';
+            
+            switch (status) {
+                case 'connected':
+                    element.classList.add('status-connected');
+                    element.textContent = 'Connected';
+                    break;
+                case 'connecting':
+                    element.classList.add('status-connecting');
+                    element.textContent = 'Connecting...';
+                    break;
+                case 'disconnected':
+                default:
+                    element.classList.add('status-disconnected');
+                    element.textContent = 'Disconnected';
+                    break;
+            }
+        }
+
+        // Initialize
+        window.onload = function() {
+            log('🚀 실시간 대시보드 시작됨', 'success');
+            log('💡 두 시스템에 연결하여 실시간 모니터링을 시작하세요', 'info');
+            
+            // 자동 연결 시도
+            setTimeout(() => {
+                log('🔄 자동 연결 시도...', 'info');
+                connectMinimal();
+                connectFastAPI();
+            }, 2000);
+        };
+
+        // Cleanup on page unload
+        window.onbeforeunload = function() {
+            if (wsConnection) {
+                wsConnection.close();
+            }
+        };
+    </script>
+</body>
+</html>
