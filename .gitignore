@@ -137,3 +137,26 @@ backup_*/
 # Large files
 *.zip
 OpenSSL-Win64.zip
+
+# Debug and development files
+*.pdb
+*.ilmap
+*.backup
+
+# Temporary files
+temp/
+shared_memory.dat
+
+# Archives
+archives/
+
+# Duplicate database files (keep only optimized versions)
+baccarat_monitor_pwa_v2.db
+baccarat_data.db
+baccarat_fastapi.db
+main_casino_baccarat_data.db
+
+# Duplicate HTML files (keep main templates)
+enhanced_dashboard.html
+modern_dashboard.html
+realtime_dashboard.html
