@@ -15,7 +15,10 @@ from pathlib import Path
 import json
 
 # 기존 AI 엔진 임포트
-from ...ai_prediction_engine import AIPredictionEngine, get_ai_prediction_engine
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent.parent))
+from ai_prediction_engine import AIPredictionEngine, get_ai_prediction_engine
 from .optimized_database import OptimizedDatabase
 from .async_ai_engine import AsyncAIEngine
 

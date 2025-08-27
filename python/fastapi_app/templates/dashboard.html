@@ -70,6 +70,16 @@
             </div>
             
             <div class="status-card">
+                <h3>🎰 페어 알림 상태</h3>
+                <div id="pair-notification-status">
+                    <div class="metric"><span>페어 감지 서비스:</span><span class="metric-value" id="pair-service-status">확인 중...</span></div>
+                    <div class="metric"><span>총 감지된 페어:</span><span class="metric-value" id="total-pairs-detected">0</span></div>
+                    <div class="metric"><span>전송된 알림:</span><span class="metric-value" id="total-notifications-sent">0</span></div>
+                    <div class="metric"><span>최근 페어:</span><span class="metric-value" id="latest-pair-type">없음</span></div>
+                </div>
+            </div>
+            
+            <div class="status-card">
                 <h3>🚨 최근 알림</h3>
                 <div id="recent-alerts" style="max-height: 200px; overflow-y: auto;">
                     <p>알림이 없습니다.</p>
@@ -83,8 +93,9 @@
     </div>
 
     <script>
-        // WebSocket 연결
-        const ws = new WebSocket(`ws://localhost:8000/ws`);
+        // WebSocket 연결 - 현재 페이지와 같은 포트 사용
+        const currentPort = window.location.port || '8080';
+        const ws = new WebSocket(`ws://localhost:${currentPort}/ws/realtime?client_id=dashboard`);
         const connectionStatus = document.getElementById('connection-status');
         
         ws.onopen = function() {
@@ -104,6 +115,7 @@
         
         // 메시지 처리
         function handleMessage(message) {
+            console.log('WebSocket 메시지 수신:', message);
             switch(message.type) {
                 case 'initial_data':
                 case 'dashboard_update':
@@ -114,6 +126,12 @@
                     break;
                 case 'ai_prediction':
                     updatePrediction(message.data);
+                    break;
+                case 'pair_notification':
+                    updatePairNotification(message.data);
+                    break;
+                case 'notification':
+                    updateGeneralNotification(message.data);
                     break;
             }
         }
@@ -152,6 +170,57 @@
         // 패킷 통계 업데이트
         function updatePacketStats(data) {
             document.getElementById('last-packet-update').textContent = new Date().toLocaleTimeString();
+        }
+        
+        // 페어 알림 업데이트
+        function updatePairNotification(data) {
+            if (data.type === 'pair_alert' && data.pair_event) {
+                const pairEvent = data.pair_event;
+                
+                // 최근 페어 타입 업데이트
+                document.getElementById('latest-pair-type').textContent = pairEvent.pair_type;
+                
+                // 알림 추가
+                const alertsContainer = document.getElementById('recent-alerts');
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-info';
+                alertDiv.innerHTML = `
+                    <strong>🎰 페어 감지:</strong> ${pairEvent.table_name} - ${pairEvent.pair_type}
+                    <small>(${new Date().toLocaleTimeString()})</small>
+                `;
+                
+                // 최신 알림을 맨 위에 추가
+                if (alertsContainer.firstChild.tagName === 'P') {
+                    alertsContainer.innerHTML = '';
+                }
+                alertsContainer.insertBefore(alertDiv, alertsContainer.firstChild);
+                
+                // 최대 10개 알림만 유지
+                while (alertsContainer.children.length > 10) {
+                    alertsContainer.removeChild(alertsContainer.lastChild);
+                }
+            }
+        }
+        
+        // 일반 알림 업데이트
+        function updateGeneralNotification(data) {
+            const alertsContainer = document.getElementById('recent-alerts');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${data.severity || 'info'}`;
+            alertDiv.innerHTML = `
+                <strong>${data.title || '알림'}:</strong> ${data.message}
+                <small>(${new Date().toLocaleTimeString()})</small>
+            `;
+            
+            if (alertsContainer.firstChild.tagName === 'P') {
+                alertsContainer.innerHTML = '';
+            }
+            alertsContainer.insertBefore(alertDiv, alertsContainer.firstChild);
+            
+            // 최대 10개 알림만 유지
+            while (alertsContainer.children.length > 10) {
+                alertsContainer.removeChild(alertsContainer.lastChild);
+            }
         }
         
         // 알림 업데이트
@@ -222,12 +291,37 @@
             return `${hours}h ${minutes}m`;
         }
         
-        // 주기적 핑 전송
+        // 주기적 핑 전송 및 상태 업데이트
         setInterval(() => {
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({type: 'ping'}));
+                // 페어 알림 서비스 상태 요청
+                fetchPairServiceStatus();
             }
         }, 30000);
+        
+        // 페어 알림 서비스 상태 조회
+        async function fetchPairServiceStatus() {
+            try {
+                const response = await fetch('/api/pair-notifications/service/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('pair-service-status').textContent = data.success ? '✅ 실행중' : '❌ 중지';
+                    if (data.pair_notification_service) {
+                        document.getElementById('total-pairs-detected').textContent = data.pair_notification_service.total_pairs_detected || 0;
+                        document.getElementById('total-notifications-sent').textContent = data.pair_notification_service.total_notifications_sent || 0;
+                    }
+                }
+            } catch (error) {
+                console.error('페어 서비스 상태 조회 실패:', error);
+                document.getElementById('pair-service-status').textContent = '❌ 오류';
+            }
+        }
+        
+        // 페이지 로드 시 초기 상태 조회
+        window.addEventListener('load', () => {
+            setTimeout(fetchPairServiceStatus, 1000);
+        });
     </script>
 </body>
 </html>

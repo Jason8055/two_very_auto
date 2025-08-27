@@ -5,8 +5,7 @@ FastAPI Main Application - Two Very Auto
 AsyncIO 네이티브 지원으로 기존 충돌 해결
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
@@ -14,15 +13,17 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-from routers import demo, stats, websocket_router, notifications, ai_predictions, database_performance
+from routers import demo, stats, websocket_router, notifications, ai_predictions, database_performance, pair_notifications
 from services.database import DatabaseManager
 from services.optimized_database import OptimizedDatabaseManager
 from services.cache_manager import cache_manager
 from services.notification_service import notification_service, WebSocketNotificationChannel, LogNotificationChannel
+from services.pair_notification_service import pair_notification_service
+from services.pair_broadcast_service import pair_broadcast_service, BroadcastChannelType
 from services.connection_monitor import connection_monitor
 from services.async_ai_engine import get_async_ai_engine
 from services.advanced_cache import init_all_caches, stop_all_caches
-from models.response import HealthCheckResponse
+# from models.response import HealthCheckResponse  # Unused import
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -54,6 +55,7 @@ optimized_db_manager = OptimizedDatabaseManager()
 app.include_router(demo.router, prefix="/api", tags=["demo"])
 app.include_router(stats.router, prefix="/api", tags=["stats"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+app.include_router(pair_notifications.router, prefix="/api/pair-notifications", tags=["pair-notifications"])
 app.include_router(ai_predictions.router, prefix="/api/ai", tags=["ai-predictions"])
 app.include_router(database_performance.router, prefix="/api/database", tags=["database-performance"])
 app.include_router(websocket_router.router, prefix="/ws", tags=["websocket"])
@@ -89,6 +91,15 @@ async def startup_event():
         await notification_service.start()
         logger.info("Notification system initialized and started")
         
+        # 페어 알림 시스템 초기화
+        await pair_notification_service.start()
+        logger.info("Pair notification service initialized and started")
+        
+        # 페어 브로드캐스트 시스템 초기화
+        pair_broadcast_service.register_channel(BroadcastChannelType.WEBSOCKET, websocket_manager)
+        await pair_broadcast_service.start()
+        logger.info("Pair broadcast service initialized and started")
+        
         # 연결 모니터링 시작
         await connection_monitor.start_monitoring()
         logger.info("Connection monitoring started")
@@ -103,8 +114,8 @@ async def startup_event():
             "FastAPI 서버가 성공적으로 시작되었습니다.",
             {
                 "version": "2.0.0", 
-                "features": ["AsyncIO", "WebSocket", "AI예측", "실시간알림", "DB최적화", "고급캐시"],
-                "optimizations": ["연결풀링", "쿼리최적화", "배치처리", "성능모니터링"]
+                "features": ["AsyncIO", "WebSocket", "AI예측", "실시간알림", "실시간페어알림", "DB최적화", "고급캐시"],
+                "optimizations": ["연결풀링", "쿼리최적화", "배치처리", "성능모니터링", "페어감지", "브로드캐스트"]
             }
         )
         
@@ -124,6 +135,14 @@ async def startup_event():
 async def shutdown_event():
     """애플리케이션 종료 이벤트"""
     logger.info("FastAPI server shutting down...")
+    
+    # 페어 브로드캐스트 서비스 중지
+    await pair_broadcast_service.stop()
+    logger.info("Pair broadcast service stopped")
+    
+    # 페어 알림 서비스 중지
+    await pair_notification_service.stop()
+    logger.info("Pair notification service stopped")
     
     # 알림 서비스 중지
     await notification_service.stop()
@@ -271,25 +290,58 @@ async def get_system_stats():
 
 if __name__ == "__main__":
     import uvicorn
+    import socket
+    
+    # 서버 설정
+    host = "127.0.0.1"
+    port = 8080
+    
+    # 포트 가용성 체크
+    def check_port(h, p):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind((h, p))
+                return True
+            except:
+                return False
+    
+    # 사용 가능한 포트 찾기
+    if not check_port(host, port):
+        for test_port in [8080, 8000, 3000, 9999, 7777]:
+            if check_port(host, test_port):
+                port = test_port
+                break
     
     print("=" * 60)
     print("Two Very Auto FastAPI Server")
     print("=" * 60)
     print("AsyncIO native support")
     print("Real-time WebSocket communication")
-    print("Automatic API documentation")
+    print("Automatic API documentation")  
     print("Type safety guaranteed")
     print("High-performance async processing")
     print("=" * 60)
-    print("URL: http://127.0.0.1:8004")
-    print("API docs: http://127.0.0.1:8004/docs")
-    print("Health check: http://127.0.0.1:8004/health")
+    print(f"URL: http://{host}:{port}")
+    print(f"API docs: http://{host}:{port}/docs")
+    print(f"Health check: http://{host}:{port}/health")
     print("=" * 60)
     
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8004,
-        reload=True,
-        access_log=True
-    )
+    try:
+        # uvicorn 직접 설정
+        config = uvicorn.Config(
+            app=app,
+            host=host,
+            port=port,
+            reload=False,
+            access_log=True,
+            log_level="info"
+        )
+        server = uvicorn.Server(config)
+        server.run()
+    except KeyboardInterrupt:
+        print("\n서버가 사용자에 의해 중단되었습니다.")
+    except Exception as e:
+        print(f"\n서버 실행 중 오류 발생: {e}")
+        import traceback
+        traceback.print_exc()

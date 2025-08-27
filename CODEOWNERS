@@ -1,0 +1,26 @@
+# Global code owners
+* @Jason8055
+
+# Python application core
+/python/ @Jason8055
+/python/fastapi_app/ @Jason8055
+/python/models/ @Jason8055
+
+# Security-critical files
+/security/ @Jason8055
+SECURITY.md @Jason8055
+.env.example @Jason8055
+
+# Infrastructure and deployment
+/docker/ @Jason8055
+/deployment/ @Jason8055
+/monitoring/ @Jason8055
+/cloud/ @Jason8055
+
+# CI/CD and automation
+/.github/ @Jason8055
+/scripts/ @Jason8055
+
+# Documentation
+*.md @Jason8055
+/docs/ @Jason8055

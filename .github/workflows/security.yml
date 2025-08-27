@@ -1,0 +1,137 @@
+name: Security Scans
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run weekly security scans
+    - cron: '0 2 * * 1'
+
+jobs:
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'python', 'javascript' ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: |
+          docker build -f docker/Dockerfile.web -t two-very-auto:web-test .
+          docker build -f docker/Dockerfile.ai -t two-very-auto:ai-test .
+
+      - name: Run Trivy scanner on web image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'two-very-auto:web-test'
+          format: 'sarif'
+          output: 'web-trivy-results.sarif'
+
+      - name: Run Trivy scanner on AI image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'two-very-auto:ai-test'
+          format: 'sarif'
+          output: 'ai-trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: |
+            web-trivy-results.sarif
+            ai-trivy-results.sarif
+
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install pip-licenses
+        run: pip install pip-licenses
+
+      - name: Check Python package licenses
+        run: |
+          cd python
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+            pip-licenses --format json --output-file ../python-licenses.json
+          fi
+          if [ -f fastapi_app/requirements.txt ]; then
+            pip install -r fastapi_app/requirements.txt
+            pip-licenses --format json --output-file ../fastapi-licenses.json
+          fi
+
+      - name: Upload license reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: license-reports
+          path: |
+            python-licenses.json
+            fastapi-licenses.json

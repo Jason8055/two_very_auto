@@ -13,7 +13,15 @@
       "Bash(git rm:*)",
       "Bash(git filter-branch:*)",
       "Bash(git checkout:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(netsh:*)",
+      "Bash(telnet:*)",
+      "Bash(wmic:*)",
+      "Bash(tasklist:*)",
+      "Bash(start_server.bat)",
+      "Bash(cmd:*)",
+      "Bash(start:*)"
     ],
     "deny": [],
     "ask": []

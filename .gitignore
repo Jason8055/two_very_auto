@@ -126,10 +126,21 @@ Thumbs.db
 *.pfx
 *.crt
 
-# Configuration files with sensitive data
-# (uncomment if needed)
-# *.ini
-# config.json
+# Environment and Configuration files with sensitive data
+.env
+.env.local
+.env.production
+*.ini
+config.json
+secrets.yaml
+credentials.json
+
+# Security certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
 
 # Backup files
 backup_*/

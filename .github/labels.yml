@@ -1,0 +1,193 @@
+# GitHub Labels Configuration
+# This file can be used with github-label-sync to manage repository labels
+
+# Priority Labels
+- name: "priority: low"
+  color: "b1f5b1"
+  description: "Low priority issue or PR"
+
+- name: "priority: medium"
+  color: "ffeb3b"
+  description: "Medium priority issue or PR"
+
+- name: "priority: high"
+  color: "ff9800"
+  description: "High priority issue or PR"
+
+- name: "priority: critical"
+  color: "f44336"
+  description: "Critical priority issue or PR"
+
+# Type Labels
+- name: "type: bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: "type: feature"
+  color: "a2eeef"
+  description: "New feature or request"
+
+- name: "type: enhancement"
+  color: "84b6eb"
+  description: "Enhancement to existing feature"
+
+- name: "type: documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "type: security"
+  color: "b60205"
+  description: "Security-related issue or improvement"
+
+- name: "type: performance"
+  color: "fbca04"
+  description: "Performance improvement"
+
+- name: "type: refactor"
+  color: "fef2c0"
+  description: "Code refactoring"
+
+- name: "type: test"
+  color: "c2e0c6"
+  description: "Adding or improving tests"
+
+- name: "type: chore"
+  color: "ffd4d4"
+  description: "Maintenance tasks"
+
+# Component Labels
+- name: "component: api"
+  color: "1f77b4"
+  description: "FastAPI server and REST endpoints"
+
+- name: "component: ai"
+  color: "ff7f0e"
+  description: "AI prediction engine and ML models"
+
+- name: "component: decoder"
+  color: "2ca02c"
+  description: "Packet decoder and network analysis"
+
+- name: "component: websocket"
+  color: "d62728"
+  description: "WebSocket service and real-time features"
+
+- name: "component: database"
+  color: "9467bd"
+  description: "Database schema and operations"
+
+- name: "component: frontend"
+  color: "8c564b"
+  description: "Dashboard and user interface"
+
+- name: "component: docker"
+  color: "e377c2"
+  description: "Docker containers and deployment"
+
+- name: "component: monitoring"
+  color: "7f7f7f"
+  description: "Monitoring and observability"
+
+- name: "component: security"
+  color: "17becf"
+  description: "Security features and authentication"
+
+# Status Labels
+- name: "status: triage"
+  color: "ededed"
+  description: "Needs triage and initial review"
+
+- name: "status: blocked"
+  color: "b60205"
+  description: "Blocked by external dependency"
+
+- name: "status: in-progress"
+  color: "fbca04"
+  description: "Currently being worked on"
+
+- name: "status: needs-review"
+  color: "0052cc"
+  description: "Needs code review"
+
+- name: "status: changes-requested"
+  color: "e99695"
+  description: "Changes requested in review"
+
+- name: "status: ready-to-merge"
+  color: "0e8a16"
+  description: "Ready to be merged"
+
+- name: "status: on-hold"
+  color: "d4c5f9"
+  description: "On hold pending decision"
+
+# Difficulty Labels
+- name: "difficulty: beginner"
+  color: "7057ff"
+  description: "Good first issue for new contributors"
+
+- name: "difficulty: intermediate"
+  color: "008672"
+  description: "Intermediate difficulty"
+
+- name: "difficulty: advanced"
+  color: "5319e7"
+  description: "Advanced difficulty, requires deep knowledge"
+
+# Size Labels (for estimating effort)
+- name: "size: XS"
+  color: "c2e0c6"
+  description: "Extra small change (< 1 day)"
+
+- name: "size: S"
+  color: "d4edda"
+  description: "Small change (1-2 days)"
+
+- name: "size: M"
+  color: "fff3cd"
+  description: "Medium change (3-5 days)"
+
+- name: "size: L"
+  color: "f8d7da"
+  description: "Large change (1-2 weeks)"
+
+- name: "size: XL"
+  color: "f5c6cb"
+  description: "Extra large change (> 2 weeks)"
+
+# Special Labels
+- name: "good-first-issue"
+  color: "7057ff"
+  description: "Good for newcomers"
+
+- name: "help-wanted"
+  color: "008672"
+  description: "Extra attention is needed"
+
+- name: "breaking-change"
+  color: "b60205"
+  description: "Introduces breaking changes"
+
+- name: "dependencies"
+  color: "0366d6"
+  description: "Pull requests that update a dependency file"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+
+- name: "invalid"
+  color: "e4e669"
+  description: "This doesn't seem right"
+
+- name: "question"
+  color: "cc317c"
+  description: "Further information is requested"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "hacktoberfest"
+  color: "ff7518"
+  description: "Issues suitable for Hacktoberfest"
