@@ -90,6 +90,54 @@
         <div class="table-grid" id="tables-container">
             <!-- 테이블 카드들이 여기에 동적으로 추가됩니다 -->
         </div>
+        
+        <!-- 게임 히스토리 섹션 -->
+        <div class="status-card">
+            <h3>📋 게임 히스토리</h3>
+            
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <select id="table-filter" style="padding: 5px;">
+                        <option value="">모든 테이블</option>
+                    </select>
+                    <select id="winner-filter" style="padding: 5px;">
+                        <option value="">모든 결과</option>
+                        <option value="Player">Player</option>
+                        <option value="Banker">Banker</option>
+                        <option value="Tie">Tie</option>
+                    </select>
+                    <select id="pair-filter" style="padding: 5px;">
+                        <option value="">페어 필터</option>
+                        <option value="true">페어 있음</option>
+                        <option value="false">페어 없음</option>
+                    </select>
+                    <button id="refresh-history" style="padding: 5px 10px; background: #667eea; color: white; border: none; border-radius: 3px; cursor: pointer;">새로고침</button>
+                </div>
+            </div>
+            
+            <div id="games-history" style="max-height: 400px; overflow-y: auto;">
+                <p>게임 데이터를 로딩중...</p>
+            </div>
+            
+            <div id="pagination-controls" style="text-align: center; margin-top: 10px;">
+                <button id="prev-page" style="padding: 5px 10px; margin: 0 5px;">이전</button>
+                <span id="page-info">1 / 1</span>
+                <button id="next-page" style="padding: 5px 10px; margin: 0 5px;">다음</button>
+            </div>
+        </div>
+        
+        <!-- 통계 요약 섹션 -->
+        <div class="status-card">
+            <h3>📊 최근 7일 통계</h3>
+            <div id="weekly-stats">
+                <div class="metric"><span>총 게임 수:</span><span class="metric-value" id="total-games-week">-</span></div>
+                <div class="metric"><span>Player 승률:</span><span class="metric-value" id="player-winrate-week">-</span></div>
+                <div class="metric"><span>Banker 승률:</span><span class="metric-value" id="banker-winrate-week">-</span></div>
+                <div class="metric"><span>Tie 비율:</span><span class="metric-value" id="tie-rate-week">-</span></div>
+                <div class="metric"><span>페어 발생률:</span><span class="metric-value" id="pair-rate-week">-</span></div>
+                <div class="metric"><span>Natural 비율:</span><span class="metric-value" id="natural-rate-week">-</span></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -318,9 +366,205 @@
             }
         }
         
+        // 게임 히스토리 관련 변수
+        let currentPage = 1;
+        let currentFilters = {
+            table_name: '',
+            winner: '',
+            has_pair: null
+        };
+
+        // 게임 히스토리 로드
+        async function loadGamesHistory(page = 1, filters = {}) {
+            try {
+                const params = new URLSearchParams({
+                    page: page.toString(),
+                    limit: '20',
+                    sort_by: 'timestamp',
+                    sort_order: 'desc'
+                });
+                
+                if (filters.table_name) params.append('table_name', filters.table_name);
+                if (filters.winner) params.append('winner', filters.winner);
+                if (filters.has_pair !== null) params.append('has_pair', filters.has_pair.toString());
+                
+                const response = await fetch(`/api/historical/games/history?${params}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        displayGamesHistory(data.data.games, data.data.pagination);
+                        updatePaginationControls(data.data.pagination);
+                    }
+                } else {
+                    document.getElementById('games-history').innerHTML = '<p>게임 데이터를 불러올 수 없습니다.</p>';
+                }
+            } catch (error) {
+                console.error('게임 히스토리 로드 실패:', error);
+                document.getElementById('games-history').innerHTML = '<p>게임 데이터 로드 중 오류가 발생했습니다.</p>';
+            }
+        }
+
+        // 게임 히스토리 표시
+        function displayGamesHistory(games, pagination) {
+            const container = document.getElementById('games-history');
+            
+            if (!games || games.length === 0) {
+                container.innerHTML = '<p>게임 데이터가 없습니다.</p>';
+                return;
+            }
+            
+            const gamesHtml = `
+                <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+                            <th style="padding: 8px; text-align: left;">시간</th>
+                            <th style="padding: 8px; text-align: left;">테이블</th>
+                            <th style="padding: 8px; text-align: center;">게임#</th>
+                            <th style="padding: 8px; text-align: center;">승자</th>
+                            <th style="padding: 8px; text-align: center;">점수</th>
+                            <th style="padding: 8px; text-align: center;">페어</th>
+                            <th style="padding: 8px; text-align: center;">특징</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${games.map(game => {
+                            const timestamp = new Date(game.timestamp).toLocaleString('ko-KR');
+                            const tableName = game.table_name || 'Unknown';
+                            const gameNumber = game.game_number || '-';
+                            
+                            // 승자 색상
+                            let winnerColor = '#333';
+                            if (game.winner === 'Player') winnerColor = '#007bff';
+                            else if (game.winner === 'Banker') winnerColor = '#28a745';
+                            else if (game.winner === 'Tie') winnerColor = '#ffc107';
+                            
+                            // 페어 표시
+                            const pairs = [];
+                            if (game.player_pair) pairs.push('P');
+                            if (game.banker_pair) pairs.push('B');
+                            const pairText = pairs.length > 0 ? pairs.join(',') : '-';
+                            
+                            // 특징 표시
+                            const features = [];
+                            if (game.natural) features.push('Natural');
+                            if (game.has_any_pair) features.push('Pair');
+                            const featuresText = features.length > 0 ? features.join(',') : '-';
+                            
+                            return `
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 6px; font-size: 11px;">${timestamp}</td>
+                                    <td style="padding: 6px; max-width: 120px; overflow: hidden; text-overflow: ellipsis;" title="${tableName}">${tableName}</td>
+                                    <td style="padding: 6px; text-align: center;">${gameNumber}</td>
+                                    <td style="padding: 6px; text-align: center; color: ${winnerColor}; font-weight: bold;">${game.winner}</td>
+                                    <td style="padding: 6px; text-align: center;">${game.player_score || 0} - ${game.banker_score || 0}</td>
+                                    <td style="padding: 6px; text-align: center; color: ${pairs.length > 0 ? '#dc3545' : '#666'};">${pairText}</td>
+                                    <td style="padding: 6px; text-align: center; font-size: 10px; color: #666;">${featuresText}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = gamesHtml;
+        }
+
+        // 페이지네이션 컨트롤 업데이트
+        function updatePaginationControls(pagination) {
+            document.getElementById('page-info').textContent = `${pagination.current_page} / ${pagination.total_pages}`;
+            document.getElementById('prev-page').disabled = !pagination.has_previous;
+            document.getElementById('next-page').disabled = !pagination.has_next;
+        }
+
+        // 주간 통계 로드
+        async function loadWeeklyStats() {
+            try {
+                const response = await fetch('/api/historical/games/statistics/summary?days=7');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data.overall_statistics) {
+                        const stats = data.data.overall_statistics;
+                        
+                        document.getElementById('total-games-week').textContent = stats.total_games || 0;
+                        document.getElementById('player-winrate-week').textContent = `${stats.win_rates?.player || 0}%`;
+                        document.getElementById('banker-winrate-week').textContent = `${stats.win_rates?.banker || 0}%`;
+                        document.getElementById('tie-rate-week').textContent = `${stats.win_rates?.tie || 0}%`;
+                        document.getElementById('pair-rate-week').textContent = `${stats.pair_rates?.total || 0}%`;
+                        document.getElementById('natural-rate-week').textContent = `${stats.natural_rate || 0}%`;
+                    }
+                }
+            } catch (error) {
+                console.error('주간 통계 로드 실패:', error);
+            }
+        }
+
+        // 테이블 목록 로드
+        async function loadTablesList() {
+            try {
+                const response = await fetch('/api/historical/tables/list');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data.tables) {
+                        const tableSelect = document.getElementById('table-filter');
+                        tableSelect.innerHTML = '<option value="">모든 테이블</option>';
+                        
+                        data.data.tables.forEach(table => {
+                            const option = document.createElement('option');
+                            option.value = table.table_name;
+                            option.textContent = `${table.table_name} (${table.total_games}게임)`;
+                            tableSelect.appendChild(option);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('테이블 목록 로드 실패:', error);
+            }
+        }
+
+        // 이벤트 리스너 등록
+        document.getElementById('refresh-history').addEventListener('click', () => {
+            loadGamesHistory(currentPage, currentFilters);
+        });
+
+        document.getElementById('prev-page').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadGamesHistory(currentPage, currentFilters);
+            }
+        });
+
+        document.getElementById('next-page').addEventListener('click', () => {
+            currentPage++;
+            loadGamesHistory(currentPage, currentFilters);
+        });
+
+        // 필터 변경 이벤트
+        ['table-filter', 'winner-filter', 'pair-filter'].forEach(filterId => {
+            document.getElementById(filterId).addEventListener('change', (e) => {
+                if (filterId === 'table-filter') currentFilters.table_name = e.target.value;
+                else if (filterId === 'winner-filter') currentFilters.winner = e.target.value;
+                else if (filterId === 'pair-filter') {
+                    currentFilters.has_pair = e.target.value === '' ? null : e.target.value === 'true';
+                }
+                
+                currentPage = 1;  // 필터 변경 시 첫 페이지로
+                loadGamesHistory(currentPage, currentFilters);
+            });
+        });
+
         // 페이지 로드 시 초기 상태 조회
         window.addEventListener('load', () => {
-            setTimeout(fetchPairServiceStatus, 1000);
+            setTimeout(() => {
+                fetchPairServiceStatus();
+                loadGamesHistory();
+                loadWeeklyStats();
+                loadTablesList();
+            }, 1000);
+            
+            // 5분마다 통계 업데이트
+            setInterval(() => {
+                loadWeeklyStats();
+            }, 5 * 60 * 1000);
         });
     </script>
 </body>

@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-from routers import demo, stats, websocket_router, notifications, ai_predictions, database_performance, pair_notifications
+from routers import demo, stats, websocket_router, notifications, ai_predictions, database_performance, pair_notifications, historical_games
 from services.database import DatabaseManager
 from services.optimized_database import OptimizedDatabaseManager
 from services.cache_manager import cache_manager
@@ -58,6 +58,7 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["not
 app.include_router(pair_notifications.router, prefix="/api/pair-notifications", tags=["pair-notifications"])
 app.include_router(ai_predictions.router, prefix="/api/ai", tags=["ai-predictions"])
 app.include_router(database_performance.router, prefix="/api/database", tags=["database-performance"])
+app.include_router(historical_games.router, prefix="/api/historical", tags=["historical-games"])
 app.include_router(websocket_router.router, prefix="/ws", tags=["websocket"])
 
 @app.on_event("startup")

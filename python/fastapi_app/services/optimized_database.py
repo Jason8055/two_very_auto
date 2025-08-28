@@ -212,10 +212,21 @@ class OptimizedDatabaseManager:
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS games (
                     id INTEGER PRIMARY KEY,
+                    table_id TEXT,
                     table_name TEXT NOT NULL,
                     game_number INTEGER NOT NULL,
-                    player_cards TEXT NOT NULL,
-                    banker_cards TEXT NOT NULL,
+                    winner TEXT NOT NULL,
+                    player_score INTEGER DEFAULT 0,
+                    banker_score INTEGER DEFAULT 0,
+                    player_pair BOOLEAN DEFAULT 0,
+                    banker_pair BOOLEAN DEFAULT 0,
+                    natural BOOLEAN DEFAULT 0,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    date TEXT,
+                    source_file TEXT,
+                    -- 기존 호환 필드들 (선택적)
+                    player_cards TEXT,
+                    banker_cards TEXT,
                     player_sum INTEGER,
                     banker_sum INTEGER,
                     has_pair BOOLEAN DEFAULT 0,
@@ -227,7 +238,7 @@ class OptimizedDatabaseManager:
                     game_result TEXT,  -- P, B, T
                     is_natural BOOLEAN DEFAULT 0,
                     total_cards INTEGER
-                ) WITHOUT ROWID
+                )
             """)
             
             # 테이블 메타데이터 (변경사항 없음)
@@ -869,6 +880,72 @@ class OptimizedDatabaseManager:
                 'timestamp': datetime.now().isoformat()
             }
     
+    async def bulk_insert_games(self, games_data: List[Dict[str, Any]]):
+        """게임 데이터 대량 삽입 (고성능)"""
+        if not games_data:
+            return
+        
+        start_time = time.time()
+        
+        try:
+            async with self.pool.get_connection() as conn:
+                # 트랜잭션 시작
+                await conn.execute("BEGIN TRANSACTION")
+                
+                try:
+                    # 배치 삽입 쿼리
+                    insert_sql = """
+                    INSERT OR REPLACE INTO games (
+                        table_id, table_name, game_number, winner, 
+                        player_score, banker_score, player_pair, banker_pair,
+                        natural, timestamp, date, source_file
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """
+                    
+                    # 데이터 준비
+                    batch_data = [
+                        (
+                            game.get('table_id', 'unknown'),
+                            game.get('table_name', 'unknown'),
+                            game.get('game_number', 0),
+                            game.get('winner', 'Unknown'),
+                            game.get('player_score', 0),
+                            game.get('banker_score', 0),
+                            int(game.get('player_pair', False)),
+                            int(game.get('banker_pair', False)),
+                            int(game.get('natural', False)),
+                            game.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                            game.get('date', datetime.now().strftime('%Y%m%d')),
+                            game.get('source_file', 'unknown')
+                        ) for game in games_data
+                    ]
+                    
+                    # 배치 실행
+                    await conn.executemany(insert_sql, batch_data)
+                    
+                    # 트랜잭션 커밋
+                    await conn.execute("COMMIT")
+                    
+                    logger.info(f"✅ 대량 삽입 완료: {len(games_data)}개 게임")
+                    
+                    # 관련 캐시 무효화
+                    if games_data and 'table_name' in games_data[0]:
+                        await self._invalidate_related_caches(games_data[0]['table_name'])
+                    
+                    # 메트릭 기록
+                    if self.enable_metrics:
+                        execution_time = time.time() - start_time
+                        await self._record_query_metric('BULK_INSERT', execution_time, len(games_data), False)
+                
+                except Exception as e:
+                    # 롤백
+                    await conn.execute("ROLLBACK")
+                    raise e
+                    
+        except Exception as e:
+            logger.error(f"❌ 대량 삽입 오류: {e}")
+            raise
+
     async def close(self):
         """데이터베이스 연결 종료"""
         try:
