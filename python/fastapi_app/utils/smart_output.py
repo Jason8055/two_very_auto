@@ -154,7 +154,7 @@ class SmartOutput:
         bar = "█" * filled + "░" * (bar_length - filled)
         progress_msg = f"{message} [{bar}] {current}/{total} ({percentage:.1f}%)"
         
-        self.info(progress_msg, console_only=True)
+        self.output(OutputLevel.INFO, progress_msg, console_only=True)
     
     def section_header(self, title: str):
         """섹션 헤더 출력"""

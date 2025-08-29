@@ -33,7 +33,7 @@ class DatabaseManager:
         
         try:
             with OutputContext("데이터베이스 초기화") as out:
-                out.info("데이터베이스 연결 설정", 파일=str(self.db_path))
+                out.info("데이터베이스 연결 설정", {"파일": str(self.db_path)})
                 
                 # 데이터베이스 테이블 생성
                 progress(1, 3, "테이블 스키마 생성")
@@ -46,8 +46,8 @@ class DatabaseManager:
                 progress(3, 3, "초기화 완료")
                 self._initialized = True
                 out.success("데이터베이스 초기화 완료", 
-                          테이블수=5,
-                          연결상태="활성")
+                          {"테이블수": 5,
+                          "연결상태": "활성"})
             
         except Exception as e:
             error("데이터베이스 초기화 실패", 
