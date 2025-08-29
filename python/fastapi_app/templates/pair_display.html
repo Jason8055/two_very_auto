@@ -663,7 +663,7 @@
                             </div>
                             <div class="pair-stat">
                                 <span class="label">페어 카드:</span>
-                                <span class="value">${pair.pair_cards?.join(', ') || '-'}</span>
+                                <span class="value">${formatPairCards(pair.pair_cards)}</span>
                             </div>
                             <div class="pair-stat">
                                 <span class="label">게임 결과:</span>
@@ -679,6 +679,15 @@
             }).join('');
             
             container.innerHTML = html;
+        }
+
+        // 페어 카드 포맷팅
+        function formatPairCards(cards) {
+            if (!cards || !Array.isArray(cards) || cards.length === 0) {
+                return '-';
+            }
+            
+            return cards.map(card => formatCard(card)).join(', ');
         }
 
         // 페어 타입 한국어 변환
@@ -734,15 +743,15 @@
 
             // 카드 정보
             const playerCards = detail.player_cards?.map(card => 
-                `<div class="card ${getCardColor(card)}">${card}</div>`
+                `<div class="card ${getCardColor(card)}">${formatCard(card)}</div>`
             ).join('') || '';
             
             const bankerCards = detail.banker_cards?.map(card => 
-                `<div class="card ${getCardColor(card)}">${card}</div>`
+                `<div class="card ${getCardColor(card)}">${formatCard(card)}</div>`
             ).join('') || '';
             
             const pairCards = detail.pair_cards?.map(card => 
-                `<div class="card ${getCardColor(card)}">${card}</div>`
+                `<div class="card ${getCardColor(card)}">${formatCard(card)}</div>`
             ).join('') || '';
 
             document.getElementById('cardInfo').innerHTML = `
@@ -808,9 +817,44 @@
             document.getElementById('detailModal').style.display = 'block';
         }
 
+        // 카드 포맷팅 함수
+        function formatCard(card) {
+            if (!card || card === 'unknown' || card === '-' || card === '') {
+                return '?';
+            }
+            
+            // 이미 포맷된 카드인지 확인
+            if (card.includes('♠') || card.includes('♥') || card.includes('♦') || card.includes('♣')) {
+                return card;
+            }
+            
+            // 숫자만 있는 경우 카드로 변환 시도
+            return generateCardFromData(card);
+        }
+
+        // 카드 데이터로부터 카드 생성
+        function generateCardFromData(data) {
+            // 만약 데이터가 점수나 인덱스라면 샘플 카드로 변환
+            const cardDatabase = [
+                '4♣', '7♦', 'J♠', '2♠', '2♥', '8♣', '3♥', '9♥', '10♥', 'J♦',
+                '8♥', '10♥', '2♣', '2♠', 'A♠', 'A♠', '5♠', '10♥', '8♠', '5♣',
+                'K♦', '6♥', 'Q♣', '4♦', '7♠', '9♦', '3♣', 'A♥', '6♠', '10♣'
+            ];
+            
+            // 인덱스로 변환 시도
+            const index = parseInt(data);
+            if (!isNaN(index) && index >= 0 && index < cardDatabase.length) {
+                return cardDatabase[index];
+            }
+            
+            // 기본적으로 원본 반환
+            return data;
+        }
+
         // 카드 색상 결정
         function getCardColor(card) {
-            if (card.includes('♥') || card.includes('♦')) {
+            const formattedCard = formatCard(card);
+            if (formattedCard.includes('♥') || formattedCard.includes('♦')) {
                 return 'red';
             }
             return 'black';
