@@ -1,0 +1,21 @@
+{
+  "ssl_monitoring": {
+    "enabled": true,
+    "check_interval_hours": 24,
+    "warning_days_before_expiry": 30,
+    "critical_days_before_expiry": 7,
+    "notification_methods": [
+      "email",
+      "log"
+    ],
+    "auto_backup_before_renewal": true,
+    "certificates": [
+      {
+        "name": "main_server",
+        "cert_path": "server.crt",
+        "key_path": "server.key",
+        "pfx_path": "server.pfx"
+      }
+    ]
+  }
+}

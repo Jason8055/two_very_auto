@@ -252,16 +252,25 @@ class HistoricalDataProcessor:
             table_id = args.get('tableId', 'unknown')
             timestamp = json_data.get('time', 0)
             
+            # 실제 게임 카운트 추출 - 패킷에서 정확한 게임 번호 가져오기
+            stats = args.get('stats', {})
+            current_game_count = stats.get('gameCount', len(history_v2))
+            
             # 테이블명 추출
             table_name = self._extract_table_name(file_name)
             
-            # 각 게임 처리
+            # 각 게임 처리 - 실제 게임 번호 계산
+            total_games = len(history_v2)
             for game_index, game in enumerate(history_v2):
                 try:
+                    # 실제 게임 번호 = 현재 gameCount - (총 게임 수 - 현재 인덱스 - 1)
+                    # 예: gameCount=63, 총 63개 게임, 첫 번째 게임(index=0)은 1번, 마지막 게임(index=62)은 63번
+                    actual_game_number = current_game_count - (total_games - game_index - 1)
+                    
                     game_data = {
                         'table_id': table_id,
                         'table_name': table_name,
-                        'game_number': game_index + 1,
+                        'game_number': actual_game_number,
                         'winner': game.get('winner', 'Unknown'),
                         'player_score': game.get('playerScore', 0),
                         'banker_score': game.get('bankerScore', 0),
@@ -278,6 +287,12 @@ class HistoricalDataProcessor:
                 except Exception as e:
                     logger.error(f"개별 게임 파싱 오류: {e}")
                     continue
+            
+            # 로그로 검증 (처음과 마지막 게임 번호 확인)
+            if games_data:
+                logger.debug(f"패킷 gameCount={current_game_count}, 게임 수={total_games}, "
+                           f"첫 번째 게임={games_data[0]['game_number']}, "
+                           f"마지막 게임={games_data[-1]['game_number']}")
             
         except Exception as e:
             logger.error(f"바카라 데이터 파싱 오류: {e}")
@@ -315,20 +330,11 @@ class HistoricalDataProcessor:
     async def _save_games_to_database(self, games_data: List[Dict[str, Any]]):
         """게임 데이터를 데이터베이스에 저장"""
         try:
-            # 배치로 저장 (성능 향상)
+            # 배치로 저장 (성능 향상) - 최적화된 DB만 사용
             await self.optimized_db_manager.bulk_insert_games(games_data)
             
-            # 일반 DB에도 저장 (호환성)
-            for game_data in games_data:
-                await self.db_manager.add_game(
-                    table_id=game_data['table_id'],
-                    winner=game_data['winner'],
-                    player_score=game_data['player_score'],
-                    banker_score=game_data['banker_score'],
-                    player_pair=game_data['player_pair'],
-                    banker_pair=game_data['banker_pair'],
-                    timestamp=game_data['timestamp']
-                )
+            # 일반 DB는 최적화된 DB에 성공적으로 저장된 경우 생략
+            logger.info(f"✅ {len(games_data)}개 게임이 최적화된 데이터베이스에 저장됨")
             
         except Exception as e:
             logger.error(f"❌ 데이터베이스 저장 오류: {e}")

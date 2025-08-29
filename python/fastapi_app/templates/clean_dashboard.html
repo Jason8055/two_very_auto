@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baccarat Monitor v2.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .version {
+            background: #3b82f6;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #10b981;
+            font-weight: 500;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: #64748b;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .stat-card:nth-child(1) .stat-number { color: #3b82f6; }
+        .stat-card:nth-child(2) .stat-number { color: #10b981; }
+        .stat-card:nth-child(3) .stat-number { color: #f59e0b; }
+        .stat-card:nth-child(4) .stat-number { color: #8b5cf6; }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 2rem;
+        }
+        
+        .section-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .section-subtitle {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1px;
+            padding: 1.5rem 2rem;
+        }
+        
+        .table-item {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .table-status {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            position: absolute;
+            top: 12px;
+            right: 12px;
+        }
+        
+        .table-name {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1e293b;
+        }
+        
+        .table-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .table-stat {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+        }
+        
+        .table-stat .label {
+            color: #64748b;
+        }
+        
+        .table-stat .value {
+            font-weight: 600;
+        }
+        
+        .pair-link {
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            display: inline-block;
+        }
+        
+        .pair-link:hover {
+            text-decoration: underline;
+        }
+        
+        .ai-section {
+            padding: 1.5rem 2rem;
+        }
+        
+        .ai-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .ai-model {
+            text-align: center;
+        }
+        
+        .model-status {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .model-name {
+            font-weight: 600;
+            color: #3b82f6;
+        }
+        
+        .prediction-area {
+            text-align: center;
+        }
+        
+        .prediction-title {
+            color: #1e293b;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .predict-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .predict-btn:hover {
+            background: #2563eb;
+        }
+        
+        .accuracy {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+        
+        .settings {
+            text-align: center;
+        }
+        
+        .settings-desc {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+        
+        .last-update {
+            color: #64748b;
+            font-size: 0.75rem;
+            text-align: right;
+            margin-top: 1rem;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            color: #64748b;
+        }
+        
+        .pair-history {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .pair-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .pair-item:hover {
+            background: #f8fafc;
+        }
+        
+        .pair-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .pair-table {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .pair-details {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        
+        .pair-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .badge-player { background: #fef2f2; color: #dc2626; }
+        .badge-banker { background: #eff6ff; color: #2563eb; }
+        .badge-both { background: #fef3c7; color: #d97706; }
+        
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1>Baccarat Monitor</h1>
+                <span class="version">v2.0</span>
+            </div>
+            <div class="status">
+                <div class="status-dot"></div>
+                <span id="lastUpdate">업데이트: 오늘 11:03:29</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- 실시간 통계 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalGames">5</div>
+                <div class="stat-label">전체 게임</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalPairs">0</div>
+                <div class="stat-label">총 페어</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeTables">0</div>
+                <div class="stat-label">활성 테이블</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pairRate">0.0%</div>
+                <div class="stat-label">페어율</div>
+            </div>
+        </div>
+
+        <!-- 테이블 현황 -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-title">🎯 테이블 현황</span>
+                <span class="section-subtitle">5개 테이블</span>
+            </div>
+            <div class="tables-grid" id="tablesGrid">
+                <!-- 테이블 데이터가 여기에 동적으로 추가됩니다 -->
+            </div>
+        </div>
+
+        <!-- AI 페어 예측 시스템 -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-title">📊 실시간 시각적 대시보드</span>
+            </div>
+            <div class="ai-section">
+                <div class="ai-content">
+                    <div class="ai-model">
+                        <div class="model-status">🔴 대기모드</div>
+                        <div>-</div>
+                        <div class="model-name">Statistical</div>
+                    </div>
+                    <div class="prediction-area">
+                        <div class="prediction-title">실시간 예측</div>
+                        <button class="predict-btn" onclick="startPrediction()">예측 시작</button>
+                        <div class="accuracy">신뢰도: 95.0%</div>
+                    </div>
+                    <div class="settings">
+                        <div class="settings-desc">최신 데이터로 AI 모델을 재훈련할 수 있습니다</div>
+                        <button onclick="showSettings()" style="background: none; border: none; color: #64748b; cursor: pointer;">⚙️ 모델 설정</button>
+                    </div>
+                </div>
+                <div class="last-update">업데이트: 통계 • 시간: 오늘 11:03:53</div>
+            </div>
+        </div>
+
+        <!-- 최근 페어 내역 -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-title">📋 최근 페어 내역</span>
+                <span class="section-subtitle">실시간 업데이트</span>
+            </div>
+            <div class="pair-history" id="pairHistory">
+                <div class="loading" id="loadingPairs">페어 데이터를 불러오는 중...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let updateInterval;
+        
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDashboard();
+            startAutoUpdate();
+        });
+        
+        // 대시보드 업데이트
+        async function updateDashboard() {
+            try {
+                // 실시간 통계 업데이트
+                await updateStats();
+                
+                // 테이블 현황 업데이트  
+                await updateTables();
+                
+                // 페어 내역 업데이트
+                await updatePairHistory();
+                
+                // 업데이트 시간 갱신
+                document.getElementById('lastUpdate').textContent = 
+                    `업데이트: ${new Date().toLocaleTimeString('ko-KR')}`;
+                
+            } catch (error) {
+                console.error('대시보드 업데이트 실패:', error);
+            }
+        }
+        
+        // 통계 업데이트
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/pairs/list?limit=1000');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const summary = data.data.summary;
+                    const scanInfo = data.data.scan_info;
+                    
+                    document.getElementById('totalGames').textContent = scanInfo.files_scanned || 0;
+                    document.getElementById('totalPairs').textContent = summary.total_pairs || 0;
+                    document.getElementById('activeTables').textContent = summary.rooms.length || 0;
+                    
+                    const pairRate = scanInfo.files_scanned > 0 ? 
+                        ((summary.total_pairs / scanInfo.files_scanned) * 100).toFixed(1) : 0.0;
+                    document.getElementById('pairRate').textContent = pairRate + '%';
+                }
+            } catch (error) {
+                console.error('통계 업데이트 실패:', error);
+            }
+        }
+        
+        // 테이블 현황 업데이트
+        async function updateTables() {
+            const tablesGrid = document.getElementById('tablesGrid');
+            const tableNames = ['table_001', 'table_002', 'table_003', 'table_004', 'table_005'];
+            
+            tablesGrid.innerHTML = '';
+            
+            for (const tableName of tableNames) {
+                try {
+                    // 각 테이블별 페어 정보 조회
+                    const response = await fetch(`/api/pairs/list?limit=100&room_filter=${tableName}`);
+                    const data = await response.json();
+                    
+                    const summary = data.success ? data.data.summary : { total_pairs: 0, player_pairs: 0, banker_pairs: 0 };
+                    
+                    const tableDiv = document.createElement('div');
+                    tableDiv.className = 'table-item';
+                    tableDiv.innerHTML = `
+                        <div class="table-status"></div>
+                        <div class="table-name">${tableName}</div>
+                        <div class="table-stats">
+                            <div class="table-stat">
+                                <span class="label">게임</span>
+                                <span class="value">1</span>
+                            </div>
+                            <div class="table-stat">
+                                <span class="label">페어</span>
+                                <span class="value">${summary.total_pairs}</span>
+                            </div>
+                            <div class="table-stat">
+                                <span class="label">페어율</span>
+                                <span class="value">0.0%</span>
+                            </div>
+                        </div>
+                        <a href="/api/pairs/formatted?room_filter=${tableName}" class="pair-link">3개월</a>
+                    `;
+                    
+                    tablesGrid.appendChild(tableDiv);
+                } catch (error) {
+                    console.error(`테이블 ${tableName} 업데이트 실패:`, error);
+                }
+            }
+        }
+        
+        // 페어 내역 업데이트
+        async function updatePairHistory() {
+            try {
+                const response = await fetch('/api/pairs/list?limit=20');
+                const data = await response.json();
+                
+                const pairHistory = document.getElementById('pairHistory');
+                const loading = document.getElementById('loadingPairs');
+                
+                if (data.success && data.data.pairs_list.length > 0) {
+                    loading.style.display = 'none';
+                    
+                    let html = '';
+                    data.data.pairs_list.forEach(pair => {
+                        const pairTypes = pair.pairs.map(p => {
+                            const badgeClass = p.type === 'Player' ? 'badge-player' : 
+                                             p.type === 'Banker' ? 'badge-banker' : 'badge-both';
+                            return `<span class="pair-badge ${badgeClass}">${p.symbol}</span>`;
+                        }).join(' ');
+                        
+                        html += `
+                            <div class="pair-item">
+                                <div class="pair-info">
+                                    <div class="pair-table">${pair.room} - 회차 ${pair.round}</div>
+                                    <div class="pair-details">${pair.timestamp} • ${pair.game_result.winner} 승</div>
+                                </div>
+                                <div>${pairTypes}</div>
+                            </div>
+                        `;
+                    });
+                    
+                    pairHistory.innerHTML = html;
+                } else {
+                    loading.style.display = 'block';
+                    loading.textContent = '페어 데이터가 없습니다.';
+                }
+            } catch (error) {
+                console.error('페어 내역 업데이트 실패:', error);
+                document.getElementById('loadingPairs').textContent = '데이터 로드 실패';
+                document.getElementById('loadingPairs').style.display = 'block';
+            }
+        }
+        
+        // 자동 업데이트 시작
+        function startAutoUpdate() {
+            updateInterval = setInterval(updateDashboard, 30000); // 30초마다 업데이트
+        }
+        
+        // 자동 업데이트 중지
+        function stopAutoUpdate() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        }
+        
+        // 예측 시작
+        function startPrediction() {
+            alert('AI 예측 시스템을 시작합니다.');
+        }
+        
+        // 설정 표시
+        function showSettings() {
+            alert('모델 설정 기능을 준비중입니다.');
+        }
+        
+        // 페이지 떠날 때 자동 업데이트 중지
+        window.addEventListener('beforeunload', stopAutoUpdate);
+    </script>
+</body>
+</html>

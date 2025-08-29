@@ -1,0 +1,34 @@
+[
+  {
+    "timestamp": "2025-08-28T13:49:53.257272",
+    "backup_type": "manual",
+    "configs": [
+      "aws_primary",
+      "gcp_secondary",
+      "local_backup"
+    ],
+    "duration_seconds": 7.186598,
+    "results": [
+      {
+        "config": "db_20250828_134953",
+        "success": false,
+        "size_mb": 0,
+        "error": "S3 클라이언트 초기화 실패"
+      },
+      {
+        "config": "db_20250828_134954",
+        "success": false,
+        "size_mb": 0,
+        "error": "GCS 클라이언트 초기화 실패"
+      },
+      {
+        "config": "db_20250828_134959",
+        "success": true,
+        "size_mb": 0,
+        "error": null
+      }
+    ],
+    "success_count": 1,
+    "total_count": 3
+  }
+]

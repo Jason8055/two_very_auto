@@ -14,6 +14,7 @@ from typing import Optional
 from models import StatsResponse, RealDataResponse, SystemStats, TableResponse
 from services.database import DatabaseManager
 from services.cache_manager import cache_manager
+from utils.smart_output import info, success, warning, error
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -39,7 +40,7 @@ async def get_system_statistics(
     - **include_cache**: 캐시 통계 포함 여부
     """
     try:
-        logger.info("📊 시스템 통계 조회 시작")
+        info("시스템 통계 조회 시작", 캐시사용=use_cache)
         
         # 성능 측정 시작
         start_time = datetime.now()
@@ -73,7 +74,10 @@ async def get_system_statistics(
             cache_stats['api_response_time_ms'] = round(response_time_ms, 2)
             cache_stats['db_query_time_ms'] = stats_data.get('query_time_ms', 0.0)
         
-        logger.info(f"✅ 시스템 통계 조회 완료: {system_stats.total_games}게임, {system_stats.total_pairs}페어")
+        success("시스템 통계 조회 완료", 
+                게임수=system_stats.total_games,
+                페어수=system_stats.total_pairs,
+                응답시간=f"{response_time_ms:.1f}ms")
         
         return StatsResponse(
             success=True,

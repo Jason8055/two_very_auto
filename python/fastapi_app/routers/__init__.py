@@ -4,6 +4,6 @@
 Routers package initialization
 """
 
-from . import demo, stats, websocket_router
+from . import demo, stats, websocket_router, packet_data
 
-__all__ = ["demo", "stats", "websocket_router"]
+__all__ = ["demo", "stats", "websocket_router", "packet_data"]

@@ -443,6 +443,8 @@ class CloudBackupManager:
         try:
             # 데이터베이스 파일 찾기
             db_paths = [
+                "python/fastapi_app/baccarat_optimized.db",
+                "python/fastapi_app/baccarat_fastapi.db",
                 "python/baccarat_monitor_pwa_v3.db",
                 "python/baccarat_monitor_pwa_v2.db",
                 "../python/baccarat_monitor_pwa_v3.db"

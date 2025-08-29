@@ -1,0 +1,23 @@
+{
+  "enabled": true,
+  "check_intervals": {
+    "backup_health": "daily",
+    "ssl_certificate": "daily",
+    "disk_space": "hourly",
+    "system_status": "hourly"
+  },
+  "thresholds": {
+    "disk_space_warning_percent": 80,
+    "disk_space_critical_percent": 90,
+    "ssl_expiry_warning_days": 30,
+    "ssl_expiry_critical_days": 7,
+    "backup_age_warning_hours": 25,
+    "backup_age_critical_hours": 48
+  },
+  "notification_cooldown_minutes": 60,
+  "auto_actions": {
+    "backup_on_warning": true,
+    "cleanup_on_disk_full": true,
+    "ssl_reminder": true
+  }
+}

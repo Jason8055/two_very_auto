@@ -1,0 +1,53 @@
+{
+  "enabled": true,
+  "email": {
+    "enabled": false,
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "sender_email": "",
+    "sender_password": "",
+    "recipients": [],
+    "use_tls": true
+  },
+  "slack": {
+    "enabled": false,
+    "webhook_url": "",
+    "channel": "#backups",
+    "username": "Two Very Auto",
+    "icon_emoji": "🎰"
+  },
+  "discord": {
+    "enabled": false,
+    "webhook_url": "",
+    "username": "Two Very Auto Bot",
+    "avatar_url": ""
+  },
+  "teams": {
+    "enabled": false,
+    "webhook_url": ""
+  },
+  "notification_levels": {
+    "success": [
+      "slack"
+    ],
+    "warning": [
+      "email",
+      "slack"
+    ],
+    "error": [
+      "email",
+      "slack",
+      "discord"
+    ],
+    "critical": [
+      "email",
+      "slack",
+      "discord",
+      "teams"
+    ]
+  },
+  "rate_limiting": {
+    "max_notifications_per_hour": 10,
+    "cooldown_minutes": 15
+  }
+}

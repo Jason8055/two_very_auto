@@ -1,0 +1,45 @@
+{
+  "enabled": true,
+  "schedules": {
+    "daily_backup": {
+      "enabled": true,
+      "time": "02:00",
+      "configs": [
+        "local_backup",
+        "aws_primary"
+      ],
+      "description": "일일 백업 (로컬 + AWS)"
+    },
+    "weekly_full_backup": {
+      "enabled": true,
+      "day": "sunday",
+      "time": "01:00",
+      "configs": [
+        "local_backup",
+        "aws_primary",
+        "gcp_secondary"
+      ],
+      "description": "주간 전체 백업 (모든 클라우드)"
+    },
+    "monthly_archive": {
+      "enabled": false,
+      "day": 1,
+      "time": "00:30",
+      "configs": [
+        "aws_primary",
+        "gcp_secondary",
+        "azure_tertiary"
+      ],
+      "description": "월간 아카이브 백업"
+    }
+  },
+  "notifications": {
+    "success": true,
+    "failure": true,
+    "log_file": "backup_scheduler.log"
+  },
+  "cleanup": {
+    "auto_cleanup": true,
+    "cleanup_interval_days": 7
+  }
+}

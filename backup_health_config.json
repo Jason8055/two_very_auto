@@ -1,0 +1,23 @@
+{
+  "enabled": true,
+  "test_interval_days": 7,
+  "max_test_duration_minutes": 30,
+  "tests": {
+    "file_integrity": true,
+    "database_structure": true,
+    "data_completeness": true,
+    "restore_functionality": true,
+    "performance_benchmark": true
+  },
+  "thresholds": {
+    "max_restore_time_minutes": 5,
+    "min_data_records": 100,
+    "max_file_size_diff_percent": 5
+  },
+  "notifications": {
+    "success": false,
+    "warning": true,
+    "failure": true,
+    "report_email": null
+  }
+}

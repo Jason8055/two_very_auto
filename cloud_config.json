@@ -1,0 +1,25 @@
+{
+  "backup_configs": {
+    "aws_primary": {
+      "provider": "aws_s3",
+      "bucket_name": "two-very-auto-backups",
+      "region": "ap-northeast-2",
+      "compression": true,
+      "encryption": true,
+      "retention_days": 30
+    },
+    "gcp_secondary": {
+      "provider": "google_cloud",
+      "bucket_name": "two-very-auto-backups-gcp",
+      "compression": true,
+      "encryption": true,
+      "retention_days": 30
+    },
+    "local_backup": {
+      "provider": "local",
+      "bucket_name": "./backups",
+      "compression": true,
+      "retention_days": 7
+    }
+  }
+}

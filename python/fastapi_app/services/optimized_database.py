@@ -21,6 +21,7 @@ import time
 
 from models.game import GameData, TableStats, TableMetadata, TableType, VIPLevel, PairType
 from services.advanced_cache import get_cache, CacheStrategy, SerializationType
+from utils.smart_output import info, success, warning, error, progress, OutputContext
 
 logger = logging.getLogger(__name__)
 

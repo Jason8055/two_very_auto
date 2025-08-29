@@ -13,7 +13,10 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-from routers import demo, stats, websocket_router, notifications, ai_predictions, database_performance, pair_notifications, historical_games
+# Smart Output System 추가
+from utils.smart_output import section_header, server_status, info, success, warning, error
+
+from routers import demo, stats, websocket_router, notifications, ai_predictions, database_performance, pair_notifications, historical_games, packet_data, improved_pair_api
 from services.database import DatabaseManager
 from services.optimized_database import OptimizedDatabaseManager
 from services.cache_manager import cache_manager
@@ -59,6 +62,8 @@ app.include_router(pair_notifications.router, prefix="/api/pair-notifications", 
 app.include_router(ai_predictions.router, prefix="/api/ai", tags=["ai-predictions"])
 app.include_router(database_performance.router, prefix="/api/database", tags=["database-performance"])
 app.include_router(historical_games.router, prefix="/api/historical", tags=["historical-games"])
+app.include_router(packet_data.router, prefix="/api", tags=["packet-data"])
+app.include_router(improved_pair_api.router, prefix="/api", tags=["improved-pairs"])
 app.include_router(websocket_router.router, prefix="/ws", tags=["websocket"])
 
 @app.on_event("startup")
@@ -185,22 +190,67 @@ async def root():
         <meta charset="UTF-8">
         <title>Two Very Auto FastAPI</title>
         <style>
-            body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
-            .btn { background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 10px; }
+            body { font-family: Arial, sans-serif; text-align: center; margin: 50px; background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; }
+            .container { max-width: 800px; margin: 0 auto; padding: 30px; border: 1px solid rgba(255,255,255,0.3); border-radius: 15px; backdrop-filter: blur(10px); background: rgba(255,255,255,0.1); }
+            .btn { background: linear-gradient(45deg, #ff6b6b, #ff8e53); color: white; padding: 15px 25px; text-decoration: none; border-radius: 8px; display: inline-block; margin: 10px; font-weight: bold; transition: all 0.3s; }
+            .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+            .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }
+            .feature-card { background: rgba(255,255,255,0.15); padding: 20px; border-radius: 10px; }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>🚀 Two Very Auto - FastAPI</h1>
-            <p>AsyncIO 지원 바카라 페어 추적 시스템</p>
+            <h1>🎯 Two Very Auto - 페어 정보 시스템</h1>
+            <p>🎰 실시간 바카라 페어 감지 및 알림 시스템</p>
             <p><strong>상태:</strong> ✅ 서비스 정상 운영</p>
-            <a href="/docs" class="btn">📖 API 문서</a>
-            <a href="/health" class="btn">💚 상태 확인</a>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>🎰 실시간 페어 감지</h3>
+                    <p>플레이어, 뱅커, 양쪽 페어 실시간 감지</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📊 패턴 분석</h3>
+                    <p>연속 페어, 교대 패턴, 희귀 패턴 분석</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔔 실시간 알림</h3>
+                    <p>WebSocket 기반 즉시 알림</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📈 상세 통계</h3>
+                    <p>테이블별 페어 발생 통계</p>
+                </div>
+            </div>
+            
+            <div style="margin: 30px 0;">
+                <a href="/pair-display" class="btn">🎯 페어 대시보드</a>
+                <a href="/docs" class="btn">📖 API 문서</a>
+                <a href="/health" class="btn">💚 상태 확인</a>
+            </div>
         </div>
     </body>
     </html>
     """)
+
+@app.get("/pair-display", response_class=HTMLResponse)
+async def pair_display():
+    """페어 전용 대시보드 페이지"""
+    template_path = Path(__file__).parent / "templates" / "pair_display.html"
+    if template_path.exists():
+        return FileResponse(template_path)
+    else:
+        # 새로운 향상된 페어 대시보드로 폴백
+        return await enhanced_pair_dashboard()
+
+@app.get("/pair-dashboard", response_class=HTMLResponse)
+async def enhanced_pair_dashboard():
+    """향상된 페어 정보 대시보드 - 실제 패킷 데이터 분석"""
+    template_path = Path(__file__).parent / "templates" / "pair_dashboard.html"
+    if template_path.exists():
+        return FileResponse(template_path)
+    else:
+        raise HTTPException(status_code=404, detail="향상된 페어 대시보드 템플릿을 찾을 수 없습니다.")
 
 @app.get("/health")
 async def health_check():
@@ -295,7 +345,8 @@ if __name__ == "__main__":
     
     # 서버 설정
     host = "127.0.0.1"
-    port = 8080
+    preferred_ports = [8080, 8000, 3000, 9999, 7777, 5000, 8081, 8082, 8083, 8084]
+    port = None
     
     # 포트 가용성 체크
     def check_port(h, p):
@@ -307,26 +358,53 @@ if __name__ == "__main__":
             except:
                 return False
     
-    # 사용 가능한 포트 찾기
-    if not check_port(host, port):
-        for test_port in [8080, 8000, 3000, 9999, 7777]:
-            if check_port(host, test_port):
-                port = test_port
-                break
+    # 서버 시작 헤더
+    section_header("Two Very Auto FastAPI Server 시작")
     
-    print("=" * 60)
-    print("Two Very Auto FastAPI Server")
-    print("=" * 60)
-    print("AsyncIO native support")
-    print("Real-time WebSocket communication")
-    print("Automatic API documentation")  
-    print("Type safety guaranteed")
-    print("High-performance async processing")
-    print("=" * 60)
-    print(f"URL: http://{host}:{port}")
-    print(f"API docs: http://{host}:{port}/docs")
-    print(f"Health check: http://{host}:{port}/health")
-    print("=" * 60)
+    # 사용 가능한 포트 찾기
+    info("포트 검색 중...")
+    for test_port in preferred_ports:
+        if check_port(host, test_port):
+            port = test_port
+            success(f"포트 {port} 사용 가능", 상태="선택됨")
+            break
+        else:
+            logger.debug(f"포트 {test_port} 사용 불가")
+    
+    # 모든 선호 포트가 사용 중인 경우 자동 할당
+    if port is None:
+        warning("모든 선호 포트 사용 중 - 자동 포트 할당 시도")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((host, 0))  # 0 = 자동 할당
+            port = s.getsockname()[1]
+            success(f"자동 할당된 포트", 포트=port)
+    
+    if port is None:
+        error("사용 가능한 포트를 찾을 수 없습니다.")
+        exit(1)
+    
+    # 서버 정보 표시
+    info("🎯 Two Very Auto FastAPI Server - 페어 정보 시스템")
+    info("✨ AsyncIO 네이티브 지원")  
+    info("📡 실시간 WebSocket 통신")
+    info("📚 자동 API 문서화")
+    info("🛡️ 타입 안전성 보장")
+    info("⚡ 고성능 비동기 처리")
+    info("🎰 실시간 페어 감지 및 알림")
+    info("📊 패턴 분석 및 통계")
+    
+    # 접속 정보
+    success("서버 접속 정보", 
+           메인_URL=f"http://{host}:{port}",
+           페어_대시보드=f"http://{host}:{port}/pair-display", 
+           API_문서=f"http://{host}:{port}/docs",
+           상태_확인=f"http://{host}:{port}/health")
+    
+    info("🎮 실시간 페어 정보 확인 방법:")
+    info(f"   1. 브라우저에서 http://{host}:{port} 접속")
+    info(f"   2. 페어 전용 화면: http://{host}:{port}/pair-display")  
+    info("   3. 실시간 WebSocket 알림 자동 수신")
     
     try:
         # uvicorn 직접 설정
@@ -341,8 +419,8 @@ if __name__ == "__main__":
         server = uvicorn.Server(config)
         server.run()
     except KeyboardInterrupt:
-        print("\n서버가 사용자에 의해 중단되었습니다.")
+        warning("서버가 사용자에 의해 중단되었습니다.")
     except Exception as e:
-        print(f"\n서버 실행 중 오류 발생: {e}")
+        error("서버 실행 중 오류 발생", 오류=str(e))
         import traceback
-        traceback.print_exc()
+        logger.error(traceback.format_exc())

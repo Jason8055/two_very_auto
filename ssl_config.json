@@ -1,0 +1,17 @@
+{
+  "domains": [],
+  "email": "",
+  "cert_type": "letsencrypt",
+  "auto_renewal": true,
+  "renewal_days_before": 30,
+  "webroot_path": "F:\\two very auto 25.08.23\\webroot",
+  "certificates": {
+    "localhost": {
+      "type": "self_signed",
+      "cert_path": "F:\\two very auto 25.08.23\\ssl_certificates\\localhost.crt",
+      "key_path": "F:\\two very auto 25.08.23\\ssl_certificates\\localhost.key",
+      "created_at": "2025-08-28T18:08:55.145411",
+      "expires_at": "2026-08-28T18:08:55.145442"
+    }
+  }
+}

@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Dict, List, Any
 import aiohttp
 import sys
+from utils.smart_output import info, success, warning, error
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -50,46 +51,47 @@ class PairNotificationTestClient:
     
     async def test_api_health(self):
         """API 상태 확인 테스트"""
-        logger.info("🏥 API 상태 확인 테스트 시작")
+        info("API 상태 확인 테스트 시작")
         
         try:
             async with self.session.get(f"{self.base_url}/health") as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.info(f"✅ API 상태: 정상 - {data.get('status', 'unknown')}")
+                    success("API 상태 정상", 상태=data.get('status', 'unknown'))
                     return True
                 else:
-                    logger.error(f"❌ API 상태: 비정상 - HTTP {response.status}")
+                    error("API 상태 비정상", HTTP코드=response.status)
                     return False
                     
         except Exception as e:
-            logger.error(f"❌ API 상태 확인 실패: {e}")
+            error("API 상태 확인 실패", 오류=str(e))
             return False
     
     async def test_pair_notification_service_health(self):
         """페어 알림 서비스 상태 확인"""
-        logger.info("🔧 페어 알림 서비스 상태 확인 테스트 시작")
+        info("페어 알림 서비스 상태 확인 테스트 시작")
         
         try:
             async with self.session.get(f"{self.base_url}/api/pair-notifications/service/health") as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.info(f"✅ 페어 알림 서비스 상태: 정상")
-                    logger.info(f"   - 페어 서비스 실행: {data.get('pair_notification_service', {}).get('running', False)}")
-                    logger.info(f"   - 총 감지된 페어: {data.get('pair_notification_service', {}).get('total_pairs_detected', 0)}")
-                    logger.info(f"   - 총 전송된 알림: {data.get('pair_notification_service', {}).get('total_notifications_sent', 0)}")
+                    service_data = data.get('pair_notification_service', {})
+                    success("페어 알림 서비스 상태 정상",
+                            실행상태=service_data.get('running', False),
+                            감지된페어수=service_data.get('total_pairs_detected', 0),
+                            전송된알림수=service_data.get('total_notifications_sent', 0))
                     return True
                 else:
-                    logger.error(f"❌ 페어 알림 서비스 상태 확인 실패 - HTTP {response.status}")
+                    error("페어 알림 서비스 상태 확인 실패", HTTP코드=response.status)
                     return False
                     
         except Exception as e:
-            logger.error(f"❌ 페어 알림 서비스 상태 확인 실패: {e}")
+            error("페어 알림 서비스 상태 확인 실패", 오류=str(e))
             return False
     
     async def test_websocket_connection(self):
         """WebSocket 연결 테스트"""
-        logger.info("🔌 WebSocket 연결 테스트 시작")
+        info("WebSocket 연결 테스트 시작")
         
         try:
             uri = f"{self.ws_url}/ws/realtime?client_id=test_client"
@@ -99,8 +101,7 @@ class PairNotificationTestClient:
             welcome_message = await asyncio.wait_for(self.websocket.recv(), timeout=5.0)
             welcome_data = json.loads(welcome_message)
             
-            logger.info(f"✅ WebSocket 연결 성공")
-            logger.info(f"   - 환영 메시지: {welcome_data.get('data', {}).get('message', '없음')}")
+            success("WebSocket 연결 성공", 환영메시지=welcome_data.get('data', {}).get('message', '없음'))
             
             # 페어 알림 구독
             subscribe_message = {
@@ -113,23 +114,23 @@ class PairNotificationTestClient:
             confirmation = await asyncio.wait_for(self.websocket.recv(), timeout=5.0)
             confirmation_data = json.loads(confirmation)
             
-            logger.info(f"✅ 페어 알림 구독 완료: {confirmation_data.get('type', 'unknown')}")
+            success("페어 알림 구독 완료", 타입=confirmation_data.get('type', 'unknown'))
             
             return True
             
         except Exception as e:
-            logger.error(f"❌ WebSocket 연결 실패: {e}")
+            error("WebSocket 연결 실패", 오류=str(e))
             return False
     
     async def test_pair_detection(self):
         """페어 감지 테스트"""
-        logger.info("🎰 페어 감지 테스트 시작")
+        info("페어 감지 테스트 시작")
         
         results = []
         
         for pair_type, (player_cards, banker_cards) in self.test_cards.items():
             try:
-                logger.info(f"   테스트 중: {pair_type}")
+                info(f"페어 타입 테스트 중", 타입=pair_type)
                 
                 test_data = {
                     "table_name": "테스트 테이블",
@@ -155,9 +156,9 @@ class PairNotificationTestClient:
                         if success:
                             if notification_sent:
                                 pair_event = data.get('pair_event', {})
-                                logger.info(f"   ✅ {pair_type}: 페어 감지됨 - {pair_event.get('pair_type', 'unknown')}")
+                                success("페어 감지 성공", 테스트타입=pair_type, 감지된페어=pair_event.get('pair_type', 'unknown'))
                             else:
-                                logger.info(f"   ℹ️ {pair_type}: 페어 감지되지 않음 또는 알림 조건 불충족")
+                                info("페어 감지되지 않음", 테스트타입=pair_type, 상태="알림 조건 불충족")
                             
                             results.append({
                                 'test_type': pair_type,
@@ -166,14 +167,14 @@ class PairNotificationTestClient:
                                 'data': data
                             })
                         else:
-                            logger.error(f"   ❌ {pair_type}: 페어 감지 실패")
+                            error("페어 감지 실패", 테스트타입=pair_type)
                             results.append({
                                 'test_type': pair_type,
                                 'success': False,
                                 'error': data
                             })
                     else:
-                        logger.error(f"   ❌ {pair_type}: HTTP {response.status}")
+                        error("페어 감지 HTTP 오류", 테스트타입=pair_type, HTTP코드=response.status)
                         results.append({
                             'test_type': pair_type,
                             'success': False,
@@ -184,7 +185,7 @@ class PairNotificationTestClient:
                 await asyncio.sleep(1)
                 
             except Exception as e:
-                logger.error(f"   ❌ {pair_type}: 예외 발생 - {e}")
+                error("페어 감지 예외 발생", 테스트타입=pair_type, 예외=str(e))
                 results.append({
                     'test_type': pair_type,
                     'success': False,
@@ -192,24 +193,24 @@ class PairNotificationTestClient:
                 })
         
         successful_tests = sum(1 for r in results if r['success'])
-        logger.info(f"✅ 페어 감지 테스트 완료: {successful_tests}/{len(results)} 성공")
+        success("페어 감지 테스트 완료", 성공=f"{successful_tests}/{len(results)}")
         
         return results
     
     async def test_settings_management(self):
         """설정 관리 테스트"""
-        logger.info("⚙️ 설정 관리 테스트 시작")
+        info("설정 관리 테스트 시작")
         
         try:
             # 현재 설정 조회
             async with self.session.get(f"{self.base_url}/api/pair-notifications/settings") as response:
                 if response.status == 200:
                     current_settings = await response.json()
-                    logger.info("✅ 현재 설정 조회 성공")
-                    logger.info(f"   - 알림 활성화: {current_settings.get('enabled', False)}")
-                    logger.info(f"   - 최소 신뢰도: {current_settings.get('min_confidence', 0)}")
+                    success("현재 설정 조회 성공",
+                            알림활성화=current_settings.get('enabled', False),
+                            최소신뢰도=current_settings.get('min_confidence', 0))
                 else:
-                    logger.error(f"❌ 현재 설정 조회 실패 - HTTP {response.status}")
+                    error("현재 설정 조회 실패", HTTP코드=response.status)
                     return False
             
             # 설정 업데이트 테스트
@@ -226,32 +227,32 @@ class PairNotificationTestClient:
             ) as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.info("✅ 설정 업데이트 성공")
-                    logger.info(f"   - 업데이트된 필드: {data.get('updated_fields', [])}")
+                    success("설정 업데이트 성공", 업데이트된필드=data.get('updated_fields', []))
                 else:
-                    logger.error(f"❌ 설정 업데이트 실패 - HTTP {response.status}")
+                    error("설정 업데이트 실패", HTTP코드=response.status)
                     return False
             
             return True
             
         except Exception as e:
-            logger.error(f"❌ 설정 관리 테스트 실패: {e}")
+            error("설정 관리 테스트 실패", 오류=str(e))
             return False
     
     async def test_statistics_and_history(self):
         """통계 및 이력 조회 테스트"""
-        logger.info("📊 통계 및 이력 조회 테스트 시작")
+        info("통계 및 이력 조회 테스트 시작")
         
         try:
             # 통계 조회
             async with self.session.get(f"{self.base_url}/api/pair-notifications/stats") as response:
                 if response.status == 200:
                     stats = await response.json()
-                    logger.info("✅ 통계 조회 성공")
-                    logger.info(f"   - 총 감지된 페어: {stats.get('stats', {}).get('total_pairs_detected', 0)}")
-                    logger.info(f"   - 총 전송된 알림: {stats.get('stats', {}).get('total_notifications_sent', 0)}")
+                    stats_data = stats.get('stats', {})
+                    success("통계 조회 성공",
+                            총감지된페어=stats_data.get('total_pairs_detected', 0),
+                            총전송된알림=stats_data.get('total_notifications_sent', 0))
                 else:
-                    logger.error(f"❌ 통계 조회 실패 - HTTP {response.status}")
+                    error("통계 조회 실패", HTTP코드=response.status)
                     return False
             
             # 이력 조회
@@ -259,9 +260,9 @@ class PairNotificationTestClient:
                 if response.status == 200:
                     history = await response.json()
                     pairs = history.get('pairs', [])
-                    logger.info(f"✅ 이력 조회 성공: {len(pairs)}개 항목")
+                    success("이력 조회 성공", 항목수=len(pairs))
                 else:
-                    logger.error(f"❌ 이력 조회 실패 - HTTP {response.status}")
+                    error("이력 조회 실패", HTTP코드=response.status)
                     return False
             
             # 테이블별 통계 조회
@@ -269,23 +270,23 @@ class PairNotificationTestClient:
                 if response.status == 200:
                     table_stats = await response.json()
                     tables = table_stats.get('tables', {})
-                    logger.info(f"✅ 테이블별 통계 조회 성공: {len(tables)}개 테이블")
+                    success("테이블별 통계 조회 성공", 테이블수=len(tables))
                 else:
-                    logger.error(f"❌ 테이블별 통계 조회 실패 - HTTP {response.status}")
+                    error("테이블별 통계 조회 실패", HTTP코드=response.status)
                     return False
             
             return True
             
         except Exception as e:
-            logger.error(f"❌ 통계 및 이력 조회 테스트 실패: {e}")
+            error("통계 및 이력 조회 테스트 실패", 오류=str(e))
             return False
     
     async def test_websocket_notifications(self, duration: int = 30):
         """WebSocket 알림 수신 테스트"""
-        logger.info(f"📡 WebSocket 알림 수신 테스트 시작 ({duration}초)")
+        info("WebSocket 알림 수신 테스트 시작", 지속시간=f"{duration}초")
         
         if not self.websocket:
-            logger.error("❌ WebSocket 연결이 필요합니다")
+            error("WebSocket 연결이 필요합니다")
             return False
         
         try:
@@ -301,12 +302,12 @@ class PairNotificationTestClient:
                         if data.get('type') == 'pair_notification':
                             notifications_received.append(data)
                             pair_data = data.get('data', {}).get('pair_event', {})
-                            logger.info(f"   📨 페어 알림 수신: {pair_data.get('table_name', 'unknown')} - {pair_data.get('pair_type', 'unknown')}")
+                            success("페어 알림 수신", 테이블=pair_data.get('table_name', 'unknown'), 타입=pair_data.get('pair_type', 'unknown'))
                         
                 except websockets.exceptions.ConnectionClosed:
-                    logger.info("   WebSocket 연결이 종료되었습니다")
+                    info("WebSocket 연결이 종료되었습니다")
                 except Exception as e:
-                    logger.error(f"   알림 수신 중 오류: {e}")
+                    error("알림 수신 중 오류", 오류=str(e))
             
             # 테스트 알림 전송
             async def send_test_notifications():
@@ -322,14 +323,14 @@ class PairNotificationTestClient:
                             }
                         ) as response:
                             if response.status == 200:
-                                logger.info(f"   🧪 테스트 알림 전송: {table_name}")
+                                info("테스트 알림 전송", 테이블=table_name)
                             else:
-                                logger.error(f"   ❌ 테스트 알림 전송 실패: {table_name}")
+                                error("테스트 알림 전송 실패", 테이블=table_name)
                         
                         await asyncio.sleep(3)  # 간격
                         
                     except Exception as e:
-                        logger.error(f"   테스트 알림 전송 중 오류 ({table_name}): {e}")
+                        error("테스트 알림 전송 중 오류", 테이블=table_name, 오류=str(e))
             
             # 동시 실행
             await asyncio.wait([
@@ -337,16 +338,16 @@ class PairNotificationTestClient:
                 asyncio.create_task(send_test_notifications())
             ], timeout=duration)
             
-            logger.info(f"✅ WebSocket 알림 테스트 완료: {len(notifications_received)}개 알림 수신")
+            success("WebSocket 알림 테스트 완료", 수신된알림수=len(notifications_received))
             return len(notifications_received) > 0
             
         except Exception as e:
-            logger.error(f"❌ WebSocket 알림 테스트 실패: {e}")
+            error("WebSocket 알림 테스트 실패", 오류=str(e))
             return False
     
     async def run_comprehensive_test(self):
         """종합 테스트 실행"""
-        logger.info("🚀 실시간 페어 알림 시스템 종합 테스트 시작")
+        info("실시간 페어 알림 시스템 종합 테스트 시작")
         
         test_results = {}
         
@@ -372,25 +373,28 @@ class PairNotificationTestClient:
         test_results['websocket_notifications'] = await self.test_websocket_notifications(30)
         
         # 결과 요약
-        logger.info("📋 테스트 결과 요약:")
+        info("테스트 결과 요약")
         successful_tests = 0
         total_tests = len(test_results)
         
         for test_name, result in test_results.items():
-            status = "✅ 통과" if result else "❌ 실패"
-            logger.info(f"   {test_name}: {status}")
+            if result:
+                success(f"{test_name} 통과")
+            else:
+                error(f"{test_name} 실패")
             if result:
                 successful_tests += 1
         
-        logger.info(f"🎯 전체 테스트 결과: {successful_tests}/{total_tests} 통과 ({successful_tests/total_tests*100:.1f}%)")
+        success_rate = successful_tests/total_tests*100
+        success("전체 테스트 결과", 통과=f"{successful_tests}/{total_tests}", 성공률=f"{success_rate:.1f}%")
         
         return test_results
 
 async def main():
     """메인 함수"""
-    print("=" * 80)
-    print("실시간 페어 알림 시스템 테스트 클라이언트")
-    print("=" * 80)
+    info("=" * 80)
+    info("실시간 페어 알림 시스템 테스트 클라이언트")
+    info("=" * 80)
     
     async with PairNotificationTestClient() as client:
         try:
@@ -399,17 +403,17 @@ async def main():
             # 최종 결과
             success_rate = sum(1 for r in results.values() if r) / len(results)
             if success_rate >= 0.8:
-                logger.info("🎉 테스트 성공: 시스템이 정상적으로 작동합니다!")
+                success("테스트 성공: 시스템이 정상적으로 작동합니다!")
                 sys.exit(0)
             else:
-                logger.error("⚠️ 테스트 부분 실패: 일부 기능에 문제가 있을 수 있습니다.")
+                warning("테스트 부분 실패: 일부 기능에 문제가 있을 수 있습니다")
                 sys.exit(1)
                 
         except KeyboardInterrupt:
-            logger.info("사용자에 의해 테스트가 중단되었습니다.")
+            info("사용자에 의해 테스트가 중단되었습니다")
             sys.exit(1)
         except Exception as e:
-            logger.error(f"테스트 실행 중 오류 발생: {e}")
+            error("테스트 실행 중 오류 발생", 오류=str(e))
             sys.exit(1)
 
 if __name__ == "__main__":

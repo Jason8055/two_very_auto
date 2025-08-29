@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Two Very Auto - 실시간 페어 정보 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a252f 50%, #2d3748 100%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card h3 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        
+        .pair-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .pair-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 5px solid;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .pair-card.player {
+            border-color: #ff6b6b;
+        }
+        
+        .pair-card.banker {
+            border-color: #4ecdc4;
+        }
+        
+        .pair-card.both {
+            border-color: #ffd93d;
+        }
+        
+        .pair-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .pair-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .pair-type {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .pair-icon {
+            font-size: 1.5em;
+        }
+        
+        .game-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .info-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .card-simulation {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        
+        .simulated-cards {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .card {
+            background: white;
+            color: black;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .card.red {
+            color: #dc3545;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+        }
+        
+        .error {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .timestamp {
+            text-align: center;
+            opacity: 0.7;
+            margin-top: 20px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .pair-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Two Very Auto - 실시간 페어 정보 시스템</h1>
+            <p>바카라 첫 두장 같은 숫자 실시간 감지 및 알림 시스템</p>
+        </div>
+        
+        <div class="stats-grid" id="statsGrid">
+            <!-- 통계 정보가 여기에 로드됩니다 -->
+        </div>
+        
+        <button class="refresh-btn" onclick="loadPairData()">🔄 새로고침</button>
+        
+        <div class="pair-grid" id="pairGrid">
+            <div class="loading pulse">
+                <div>📡 패킷 데이터 분석 중...</div>
+                <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.8;">
+                    JSON 패킷에서 페어 정보를 추출하고 있습니다
+                </div>
+            </div>
+        </div>
+        
+        <div class="timestamp" id="lastUpdate"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let reconnectInterval = null;
+        
+        // 페이지 로드시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPairData();
+            connectWebSocket();
+            
+            // 30초마다 자동 새로고침
+            setInterval(loadPairData, 30000);
+        });
+        
+        // 페어 데이터 로드
+        async function loadPairData() {
+            try {
+                console.log('페어 데이터 로딩 시작...');
+                
+                const response = await fetch('/api/packet-data/pairs?limit=20');
+                const data = await response.json();
+                
+                console.log('페어 데이터 응답:', data);
+                
+                if (data.success) {
+                    displayStatistics(data.statistics || {});
+                    displayPairs(data.pairs || []);
+                    updateTimestamp();
+                } else {
+                    showError('데이터 로드 실패: ' + (data.message || '알 수 없는 오류'));
+                }
+                
+            } catch (error) {
+                console.error('페어 데이터 로드 오류:', error);
+                showError('서버 연결 실패: ' + error.message);
+            }
+        }
+        
+        // 통계 정보 표시
+        function displayStatistics(stats) {
+            const statsGrid = document.getElementById('statsGrid');
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <h3 style="color: #4ecdc4;">${stats.total_pairs || 0}</h3>
+                    <div>총 페어 수</div>
+                </div>
+                <div class="stat-card">
+                    <h3 style="color: #ff6b6b;">${stats.player_pairs || 0}</h3>
+                    <div>플레이어 페어</div>
+                </div>
+                <div class="stat-card">
+                    <h3 style="color: #45b7d1;">${stats.banker_pairs || 0}</h3>
+                    <div>뱅커 페어</div>
+                </div>
+                <div class="stat-card">
+                    <h3 style="color: #ffd93d;">${stats.both_pairs || 0}</h3>
+                    <div>양쪽 페어</div>
+                </div>
+            `;
+        }
+        
+        // 페어 정보 표시
+        function displayPairs(pairs) {
+            const pairGrid = document.getElementById('pairGrid');
+            
+            if (!pairs || pairs.length === 0) {
+                pairGrid.innerHTML = `
+                    <div class="no-data">
+                        <h3>📊 페어 데이터 없음</h3>
+                        <p>현재 감지된 페어가 없습니다.</p>
+                        <p>패킷 폴더에서 JSON 데이터를 확인해보세요.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            pairGrid.innerHTML = pairs.map(pair => {
+                const pairTypes = pair.pair_type || [];
+                const pairDetails = pair.pair_details || {};
+                const visualization = pair.visualization || {};
+                
+                let cardClass = 'pair-card';
+                let icon = '🎯';
+                
+                if (pairDetails.both_pairs) {
+                    cardClass += ' both';
+                    icon = '🟡';
+                } else if (pairDetails.player_pair) {
+                    cardClass += ' player';
+                    icon = '🔴';
+                } else if (pairDetails.banker_pair) {
+                    cardClass += ' banker';
+                    icon = '🔵';
+                }
+                
+                const gameInfo = visualization.game_info || {};
+                const pairVisualizations = visualization.pair_visualization || [];
+                
+                return `
+                    <div class="${cardClass}">
+                        <div class="pair-header">
+                            <div class="pair-type">${pairTypes.join(', ') || '페어 감지'}</div>
+                            <div class="pair-icon">${icon}</div>
+                        </div>
+                        
+                        <div class="game-info">
+                            <div class="info-item">
+                                <div>게임 #${pair.game_number || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div>승부: ${pair.winner || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div>P: ${pair.player_score || 0}점</div>
+                            </div>
+                            <div class="info-item">
+                                <div>B: ${pair.banker_score || 0}점</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 10px;">
+                            <div><strong>테이블:</strong> ${pair.table_id || 'N/A'}</div>
+                            <div><strong>방명:</strong> ${pair.room_name || 'N/A'}</div>
+                            <div><strong>시간:</strong> ${formatTimestamp(pair.timestamp)}</div>
+                        </div>
+                        
+                        ${pairVisualizations.map(viz => `
+                            <div class="card-simulation">
+                                <div><strong>${viz.type}:</strong> ${viz.description}</div>
+                                ${viz.cards_simulated && viz.cards_simulated.length > 0 ? `
+                                    <div class="simulated-cards">
+                                        ${viz.cards_simulated.map(card => {
+                                            const isRed = card.card && (card.card.includes('♥') || card.card.includes('♦'));
+                                            return `<div class="card ${isRed ? 'red' : ''}">${card.card || '?'}</div>`;
+                                        }).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 타임스탬프 포맷
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'N/A';
+            try {
+                return new Date(timestamp).toLocaleString('ko-KR');
+            } catch (e) {
+                return timestamp;
+            }
+        }
+        
+        // 오류 표시
+        function showError(message) {
+            const pairGrid = document.getElementById('pairGrid');
+            pairGrid.innerHTML = `
+                <div class="error">
+                    <h3>⚠️ 오류 발생</h3>
+                    <p>${message}</p>
+                    <button class="refresh-btn" onclick="loadPairData()" style="margin-top: 15px;">다시 시도</button>
+                </div>
+            `;
+        }
+        
+        // 타임스탬프 업데이트
+        function updateTimestamp() {
+            const timestampElement = document.getElementById('lastUpdate');
+            const now = new Date().toLocaleString('ko-KR');
+            timestampElement.textContent = `마지막 업데이트: ${now}`;
+        }
+        
+        // WebSocket 연결
+        function connectWebSocket() {
+            try {
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${wsProtocol}//${window.location.host}/ws/pair-notifications`;
+                
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function(event) {
+                    console.log('WebSocket 연결됨');
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('WebSocket 메시지 수신:', data);
+                        
+                        // 새로운 페어 데이터가 있으면 자동 새로고침
+                        if (data.type === 'pair_detected') {
+                            loadPairData();
+                        }
+                    } catch (e) {
+                        console.error('WebSocket 메시지 파싱 오류:', e);
+                    }
+                };
+                
+                ws.onclose = function(event) {
+                    console.log('WebSocket 연결 끊어짐');
+                    // 5초 후 재연결 시도
+                    setTimeout(connectWebSocket, 5000);
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('WebSocket 오류:', error);
+                };
+                
+            } catch (error) {
+                console.error('WebSocket 연결 실패:', error);
+            }
+        }
+    </script>
+</body>
+</html>
