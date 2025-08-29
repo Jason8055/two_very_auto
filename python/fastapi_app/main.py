@@ -8,10 +8,28 @@ AsyncIO 네이티브 지원으로 기존 충돌 해결
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 import asyncio
 import logging
 from pathlib import Path
 from datetime import datetime
+
+# 전역 예외 처리기 직접 구현
+def global_exception_handler(request, exc):
+    """전역 예외 처리기"""
+    logger.error(f"전역 예외 발생: {exc}")
+    return {"error": "내부 서버 오류가 발생했습니다", "detail": str(exc)}
+
+def http_exception_handler(request, exc):
+    """HTTP 예외 처리기"""
+    logger.warning(f"HTTP 예외: {exc.status_code} - {exc.detail}")
+    return {"error": f"HTTP {exc.status_code}", "detail": exc.detail}
+
+def validation_exception_handler(request, exc):
+    """유효성 검증 예외 처리기"""
+    logger.warning(f"검증 오류: {exc.errors()}")
+    return {"error": "요청 데이터 검증 실패", "detail": exc.errors()}
 
 # Smart Output System 추가
 from utils.smart_output import section_header, server_status, info, success, warning, error
@@ -26,7 +44,6 @@ from services.pair_broadcast_service import pair_broadcast_service, BroadcastCha
 from services.connection_monitor import connection_monitor
 from services.async_ai_engine import get_async_ai_engine
 from services.advanced_cache import init_all_caches, stop_all_caches
-# from models.response import HealthCheckResponse  # Unused import
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -54,6 +71,12 @@ app.add_middleware(
 db_manager = DatabaseManager()
 optimized_db_manager = OptimizedDatabaseManager()
 
+# 전역 예외 처리기 등록
+app.add_exception_handler(Exception, global_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
 # 라우터 포함
 app.include_router(demo.router, prefix="/api", tags=["demo"])
 app.include_router(stats.router, prefix="/api", tags=["stats"])
@@ -69,13 +92,13 @@ app.include_router(websocket_router.router, prefix="/ws", tags=["websocket"])
 @app.on_event("startup")
 async def startup_event():
     """애플리케이션 시작 이벤트"""
-    logger.info("FastAPI server starting...")
+    logger.info("FastAPI 서버 시작 중...")
     
     try:
         # 데이터베이스 초기화
         await db_manager.initialize()
         await optimized_db_manager.initialize()
-        logger.info("Database initialization completed (Standard + Optimized)")
+        logger.info("데이터베이스 초기화 완료 (표준 + 최적화)")
         
         # 캐시 시스템 초기화
         await cache_manager.warm_up(db_manager)
@@ -83,7 +106,7 @@ async def startup_event():
         
         # 고급 캐시 시스템 초기화
         await init_all_caches()
-        logger.info("Cache system initialized with warm-up data (Standard + Advanced)")
+        logger.info("캐시 시스템 초기화 완료 (표준 + 고급)")
         
         # 알림 시스템 초기화
         from routers.websocket_router import get_websocket_manager
@@ -95,24 +118,24 @@ async def startup_event():
         
         # 알림 서비스 시작
         await notification_service.start()
-        logger.info("Notification system initialized and started")
+        logger.info("알림 시스템 초기화 및 시작 완료")
         
         # 페어 알림 시스템 초기화
         await pair_notification_service.start()
-        logger.info("Pair notification service initialized and started")
+        logger.info("페어 알림 서비스 초기화 및 시작 완료")
         
         # 페어 브로드캐스트 시스템 초기화
         pair_broadcast_service.register_channel(BroadcastChannelType.WEBSOCKET, websocket_manager)
         await pair_broadcast_service.start()
-        logger.info("Pair broadcast service initialized and started")
+        logger.info("페어 브로드캐스트 서비스 초기화 및 시작 완료")
         
         # 연결 모니터링 시작
         await connection_monitor.start_monitoring()
-        logger.info("Connection monitoring started")
+        logger.info("연결 모니터링 시작 완료")
         
         # AI 예측 엔진 초기화
         ai_engine = await get_async_ai_engine()
-        logger.info("Async AI prediction engine initialized")
+        logger.info("비동기 AI 예측 엔진 초기화 완료")
         
         # 환영 알림 전송
         await notification_service.send_system_warning(
@@ -127,12 +150,12 @@ async def startup_event():
         
         # 백그라운드 작업 시작
         asyncio.create_task(background_monitoring())
-        logger.info("Background monitoring started")
+        logger.info("백그라운드 모니터링 시작 완료")
         
-        logger.info("FastAPI server startup completed successfully")
+        logger.info("FastAPI 서버 시작 완료")
         
     except Exception as e:
-        logger.error(f"FastAPI server startup failed: {e}")
+        logger.error(f"FastAPI 서버 시작 실패: {e}")
         import traceback
         logger.error(traceback.format_exc())
         raise
@@ -140,40 +163,40 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """애플리케이션 종료 이벤트"""
-    logger.info("FastAPI server shutting down...")
+    logger.info("FastAPI 서버 종료 중...")
     
     # 페어 브로드캐스트 서비스 중지
     await pair_broadcast_service.stop()
-    logger.info("Pair broadcast service stopped")
+    logger.info("페어 브로드캐스트 서비스 중지")
     
     # 페어 알림 서비스 중지
     await pair_notification_service.stop()
-    logger.info("Pair notification service stopped")
+    logger.info("페어 알림 서비스 중지")
     
     # 알림 서비스 중지
     await notification_service.stop()
-    logger.info("Notification service stopped")
+    logger.info("알림 서비스 중지")
     
     # 연결 모니터링 중지
     await connection_monitor.stop_monitoring()
-    logger.info("Connection monitoring stopped")
+    logger.info("연결 모니터링 중지")
     
     # 고급 캐시 시스템 중지
     await stop_all_caches()
-    logger.info("Advanced cache system stopped")
+    logger.info("고급 캐시 시스템 중지")
     
     # AI 예측 엔진 중지
     if get_async_ai_engine:
         try:
             ai_engine = await get_async_ai_engine()
             await ai_engine.stop_background_tasks()
-            logger.info("Async AI prediction engine stopped")
+            logger.info("비동기 AI 예측 엔진 중지")
         except Exception as e:
-            logger.error(f"Error stopping AI engine: {e}")
+            logger.error(f"AI 엔진 중지 오류: {e}")
     
     await db_manager.close()
     await optimized_db_manager.close()
-    logger.info("Database connections closed (Standard + Optimized)")
+    logger.info("데이터베이스 연결 종료 (표준 + 최적화)")
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -256,11 +279,11 @@ async def enhanced_pair_dashboard():
 async def health_check():
     """서비스 상태 확인"""
     try:
-        logger.info("Health check requested")
+        logger.info("상태 점검 요청")
         
         # 데이터베이스 상태 확인
         db_status = await db_manager.health_check()
-        logger.info(f"Database status: {db_status}")
+        logger.info(f"데이터베이스 상태: {db_status}")
         
         response = {
             "success": True,
@@ -274,18 +297,18 @@ async def health_check():
                 "background_tasks": "running"
             }
         }
-        logger.info(f"Health check completed successfully")
+        logger.info("상태 점검 완료")
         return response
         
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        logger.error(f"상태 점검 실패: {e}")
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=503, detail=f"Service unavailable: {str(e)}")
 
 async def background_monitoring():
     """백그라운드 모니터링 작업"""
-    logger.info("Background monitoring started")
+    logger.info("백그라운드 모니터링 시작")
     
     # WebSocket 매니저 import
     from routers.websocket_router import get_websocket_manager
@@ -316,14 +339,14 @@ async def background_monitoring():
                         }
                     })
                     
-                    logger.info(f"System stats broadcasted to {websocket_manager.get_connection_count()} clients")
+                    logger.info(f"시스템 통계 {websocket_manager.get_connection_count()}개 클라이언트에 전송")
                 except Exception as e:
-                    logger.error(f"Stats broadcast error: {e}")
+                    logger.error(f"통계 전송 오류: {e}")
             
-            logger.info(f"System monitoring: {basic_stats.get('status', 'unknown')}")
+            logger.info(f"시스템 모니터링: {basic_stats.get('status', '알 수 없음')}")
             
         except Exception as e:
-            logger.error(f"Background monitoring error: {e}")
+            logger.error(f"백그라운드 모니터링 오류: {e}")
             await asyncio.sleep(60)  # 오류 시 1분 대기
 
 async def get_system_stats():
@@ -336,7 +359,7 @@ async def get_system_stats():
             "database_connections": 1
         }
     except Exception as e:
-        logger.error(f"System stats collection error: {e}")
+        logger.error(f"시스템 통계 수집 오류: {e}")
         return {"status": "error", "error": str(e)}
 
 if __name__ == "__main__":

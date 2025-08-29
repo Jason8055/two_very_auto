@@ -21,7 +21,9 @@
       "Bash(tasklist:*)",
       "Bash(start_server.bat)",
       "Bash(cmd:*)",
-      "Bash(start:*)"
+      "Bash(start:*)",
+      "Bash(\"빠른_서버_시작.bat\")",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

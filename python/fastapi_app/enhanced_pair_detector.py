@@ -28,20 +28,46 @@ class EnhancedPairDetector:
         """패킷 데이터에서 페어 정보를 분석"""
         results = []
         
-        # JSON 패킷 찾기
-        json_matches = re.findall(r'\{.*?"type":"baccarat\.encodedShoeState".*?\}', packet_content, re.DOTALL)
-        
-        for json_match in json_matches:
-            try:
-                packet_data = json.loads(json_match)
-                pair_info = self.extract_pair_info_from_json(packet_data)
-                if pair_info:
-                    results.extend(pair_info)
-            except json.JSONDecodeError as e:
-                logger.warning(f"JSON 파싱 실패: {e}")
-                continue
+        # 더 안전한 JSON 패킷 찾기 및 파싱
+        try:
+            # 중괄호 균형을 맞추는 JSON 추출
+            json_objects = self._extract_balanced_json_objects(packet_content)
+            
+            for json_obj in json_objects:
+                if '"type":"baccarat.encodedShoeState"' in json_obj:
+                    try:
+                        packet_data = json.loads(json_obj)
+                        pair_info = self.extract_pair_info_from_json(packet_data)
+                        if pair_info:
+                            results.extend(pair_info)
+                    except json.JSONDecodeError:
+                        # JSON 파싱 실패를 조용히 처리
+                        continue
+        except Exception:
+            # 모든 오류를 조용히 처리
+            pass
         
         return results
+    
+    def _extract_balanced_json_objects(self, content: str) -> List[str]:
+        """중괄호 균형을 맞추는 JSON 객체 추출"""
+        json_objects = []
+        brace_count = 0
+        start_pos = -1
+        
+        for i, char in enumerate(content):
+            if char == '{':
+                if brace_count == 0:
+                    start_pos = i
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0 and start_pos != -1:
+                    json_obj = content[start_pos:i+1]
+                    json_objects.append(json_obj)
+                    start_pos = -1
+        
+        return json_objects
     
     def extract_pair_info_from_json(self, packet_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """JSON 데이터에서 페어 정보 추출"""
