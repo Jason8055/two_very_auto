@@ -20,25 +20,37 @@ class ImprovedPairDetector:
     def __init__(self):
         """초기화"""
         self.pair_count = 0
+        # 성능 최적화를 위한 패턴 미리 컴파일
+        self.baccarat_pattern = re.compile(r'baccarat\.encodedShoeState')
+        self.json_pattern = re.compile(r'^\s*\{.*\}\s*$')
         
     def analyze_packet_data(self, packet_content: str, room_name: str = "Unknown") -> List[Dict[str, Any]]:
         """패킷 데이터에서 페어 정보를 분석하여 리스트로 반환"""
         pair_results = []
         
         try:
-            # JSON 패킷 찾기 (개선된 정규식)
+            # 바카라 패킷이 없으면 즉시 반환 (성능 최적화)
+            if not self.baccarat_pattern.search(packet_content):
+                return pair_results
+            
+            # 스마트한 JSON 패킷 찾기
             lines = packet_content.split('\n')
             json_matches = []
             
             for line in lines:
                 line = line.strip()
-                if '] {' in line and 'baccarat.encodedShoeState' in line:
+                if len(line) < 20:  # 너무 짧은 라인 스킵
+                    continue
+                    
+                if '] {' in line and self.baccarat_pattern.search(line):
                     # 타임스태프 뒤의 JSON 부분 추출
                     json_start = line.find('] {') + 2
                     json_part = line[json_start:]
-                    json_matches.append(json_part)
-                elif line.startswith('{') and 'baccarat.encodedShoeState' in line:
-                    json_matches.append(line)
+                    if self._is_valid_json_basic(json_part):
+                        json_matches.append(json_part)
+                elif line.startswith('{') and self.baccarat_pattern.search(line):
+                    if self._is_valid_json_basic(line):
+                        json_matches.append(line)
             
             for json_match in json_matches:
                 try:
@@ -46,16 +58,32 @@ class ImprovedPairDetector:
                     pairs_found = self.extract_pairs_from_packet(packet_data, room_name)
                     if pairs_found:
                         pair_results.extend(pairs_found)
-                except json.JSONDecodeError as e:
-                    print(f"JSON 파싱 실패: {e}")
-                    print(f"문제 JSON: {json_match[:200]}")
-                    logger.warning(f"JSON 파싱 실패: {e}")
+                except json.JSONDecodeError:
+                    # JSON 파싱 실패를 완전히 무시 (로그 없음)
                     continue
                     
-        except Exception as e:
-            logger.error(f"패킷 데이터 분석 실패: {e}")
+        except Exception:
+            # 모든 오류를 완전히 무시
+            pass
         
         return pair_results
+    
+    def _is_valid_json_basic(self, json_str: str) -> bool:
+        """기본 JSON 형식 검증 (파싱 전 빠른 체크)"""
+        if not json_str or len(json_str) < 10:
+            return False
+        
+        # 기본 중괄호 체크
+        if not (json_str.startswith('{') and json_str.endswith('}')):
+            return False
+            
+        # 중괄호 개수 기본 체크
+        open_count = json_str.count('{')
+        close_count = json_str.count('}')
+        if open_count != close_count or open_count == 0:
+            return False
+            
+        return True
     
     def extract_pairs_from_packet(self, packet_data: Dict[str, Any], room_name: str) -> List[Dict[str, Any]]:
         """패킷에서 페어 정보 추출"""

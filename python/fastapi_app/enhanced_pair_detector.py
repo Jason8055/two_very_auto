@@ -23,39 +23,51 @@ class EnhancedPairDetector:
             'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
             '10': 0, 'J': 0, 'Q': 0, 'K': 0
         }
+        # JSON 검증 패턴 미리 컴파일
+        self.baccarat_pattern = re.compile(r'"type":\s*"baccarat\.encodedShoeState"')
+        self.json_start_pattern = re.compile(r'\{["\s]')
     
     def analyze_packet_data(self, packet_content: str) -> List[Dict[str, Any]]:
-        """패킷 데이터에서 페어 정보를 분석"""
+        """패킷 데이터에서 페어 정보를 분석 (완전 무음 처리)"""
         results = []
         
-        # 더 안전한 JSON 패킷 찾기 및 파싱
         try:
-            # 중괄호 균형을 맞추는 JSON 추출
-            json_objects = self._extract_balanced_json_objects(packet_content)
+            # 바카라 패킷이 없으면 즉시 반환
+            if not self.baccarat_pattern.search(packet_content):
+                return results
+            
+            # 스마트한 JSON 추출 및 파싱
+            json_objects = self._extract_smart_json_objects(packet_content)
             
             for json_obj in json_objects:
-                if '"type":"baccarat.encodedShoeState"' in json_obj:
-                    try:
-                        packet_data = json.loads(json_obj)
-                        pair_info = self.extract_pair_info_from_json(packet_data)
-                        if pair_info:
-                            results.extend(pair_info)
-                    except json.JSONDecodeError:
-                        # JSON 파싱 실패를 조용히 처리
+                try:
+                    # 빠른 기본 검증
+                    if not self._is_valid_json_format(json_obj):
                         continue
-        except Exception:
-            # 모든 오류를 조용히 처리
+                        
+                    packet_data = json.loads(json_obj)
+                    pair_info = self.extract_pair_info_from_json(packet_data)
+                    if pair_info:
+                        results.extend(pair_info)
+                except:
+                    # 모든 파싱 실패를 완전히 무시 (로그 없음)
+                    pass
+        except:
+            # 모든 오류를 완전히 무시
             pass
         
         return results
     
-    def _extract_balanced_json_objects(self, content: str) -> List[str]:
-        """중괄호 균형을 맞추는 JSON 객체 추출"""
+    def _extract_smart_json_objects(self, content: str) -> List[str]:
+        """스마트한 JSON 객체 추출 (성능 최적화)"""
         json_objects = []
         brace_count = 0
         start_pos = -1
+        content_len = len(content)
         
-        for i, char in enumerate(content):
+        i = 0
+        while i < content_len:
+            char = content[i]
             if char == '{':
                 if brace_count == 0:
                     start_pos = i
@@ -64,10 +76,32 @@ class EnhancedPairDetector:
                 brace_count -= 1
                 if brace_count == 0 and start_pos != -1:
                     json_obj = content[start_pos:i+1]
-                    json_objects.append(json_obj)
+                    # 기본 바카라 체크만 수행
+                    if '"type":"baccarat.encodedShoeState"' in json_obj:
+                        json_objects.append(json_obj)
                     start_pos = -1
+            i += 1
         
         return json_objects
+    
+    def _is_valid_json_format(self, json_str: str) -> bool:
+        """JSON 문자열 기본 형식 검증 (파싱 전 빠른 체크)"""
+        if not json_str or len(json_str) < 10:
+            return False
+        
+        # 기본 중괄호 체크
+        if not (json_str.startswith('{') and json_str.endswith('}')):
+            return False
+            
+        # 중괄호 개수 체크
+        if json_str.count('{') != json_str.count('}'):
+            return False
+            
+        # 기본적인 JSON 패턴 체크
+        if not self.json_start_pattern.match(json_str):
+            return False
+            
+        return True
     
     def extract_pair_info_from_json(self, packet_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """JSON 데이터에서 페어 정보 추출"""
