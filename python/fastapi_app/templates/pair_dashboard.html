@@ -74,7 +74,7 @@
         }
         
         .pair-card {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(43, 48, 53, 0.95);
             border-radius: 15px;
             padding: 20px;
             border-left: 5px solid;
@@ -83,11 +83,11 @@
         }
         
         .pair-card.player {
-            border-color: #ff6b6b;
+            border-color: #ff4757;
         }
         
         .pair-card.banker {
-            border-color: #4ecdc4;
+            border-color: #3742fa;
         }
         
         .pair-card.both {
@@ -112,7 +112,21 @@
         }
         
         .pair-icon {
-            font-size: 1.5em;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+        }
+        
+        .pair-icon.player {
+            background-color: #ff4757;
+        }
+        
+        .pair-icon.banker {
+            background-color: #3742fa;
+        }
+        
+        .pair-icon.both {
+            background-color: #ffd93d;
         }
         
         .game-info {
@@ -120,40 +134,62 @@
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
         }
         
         .info-item {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 8px 12px;
+            text-align: center;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+        
+        .card-display {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
             border-radius: 8px;
             text-align: center;
         }
         
-        .card-simulation {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 10px;
-        }
-        
-        .simulated-cards {
+        .cards {
             display: flex;
-            gap: 10px;
             justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
         }
         
         .card {
             background: white;
             color: black;
             padding: 8px 12px;
-            border-radius: 8px;
+            border-radius: 6px;
             font-weight: bold;
             min-width: 40px;
             text-align: center;
         }
         
         .card.red {
-            color: #dc3545;
+            color: #ff4757;
+        }
+        
+        .refresh-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            transform: translateY(-2px);
         }
         
         .loading {
@@ -162,67 +198,33 @@
             font-size: 1.2em;
         }
         
-        .error {
-            background: rgba(220, 53, 69, 0.2);
-            color: #ff6b6b;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            text-align: center;
-        }
-        
-        .refresh-btn {
-            background: linear-gradient(45deg, #4ecdc4, #45b7d1);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: all 0.3s ease;
-            margin: 20px auto;
-            display: block;
-        }
-        
-        .refresh-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-        
-        .timestamp {
-            text-align: center;
-            opacity: 0.7;
-            margin-top: 20px;
-        }
-        
-        .no-data {
-            text-align: center;
-            padding: 40px;
-            opacity: 0.7;
-        }
-        
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .header h1 {
-                font-size: 1.8em;
-            }
-            
-            .pair-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
         .pulse {
             animation: pulse 2s infinite;
         }
         
         @keyframes pulse {
             0% { opacity: 1; }
-            50% { opacity: 0.7; }
+            50% { opacity: 0.5; }
             100% { opacity: 1; }
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #ff6b6b;
+        }
+        
+        .timestamp {
+            text-align: center;
+            margin-top: 20px;
+            color: #888;
+            font-size: 0.9em;
         }
     </style>
 </head>
@@ -333,17 +335,21 @@
                 const visualization = pair.visualization || {};
                 
                 let cardClass = 'pair-card';
-                let icon = '🎯';
+                let iconClass = 'pair-icon';
+                let pairTypeText = '';
                 
-                if (pairDetails.both_pairs) {
-                    cardClass += ' both';
-                    icon = '🟡';
-                } else if (pairDetails.player_pair) {
+                if (pairTypes.includes('Player Pair')) {
                     cardClass += ' player';
-                    icon = '🔴';
-                } else if (pairDetails.banker_pair) {
+                    iconClass += ' player';
+                    pairTypeText = 'Player Pair';
+                } else if (pairTypes.includes('Banker Pair')) {
                     cardClass += ' banker';
-                    icon = '🔵';
+                    iconClass += ' banker';
+                    pairTypeText = 'Banker Pair';
+                } else if (pairTypes.includes('Both Pairs')) {
+                    cardClass += ' both';
+                    iconClass += ' both';
+                    pairTypeText = 'Both Pairs';
                 }
                 
                 const gameInfo = visualization.game_info || {};
@@ -352,23 +358,15 @@
                 return `
                     <div class="${cardClass}">
                         <div class="pair-header">
-                            <div class="pair-type">${pairTypes.join(', ') || '페어 감지'}</div>
-                            <div class="pair-icon">${icon}</div>
+                            <div class="pair-type">${pairTypeText}</div>
+                            <div class="${iconClass}"></div>
                         </div>
                         
                         <div class="game-info">
-                            <div class="info-item">
-                                <div>게임 #${pair.game_number || 'N/A'}</div>
-                            </div>
-                            <div class="info-item">
-                                <div>승부: ${pair.winner || 'N/A'}</div>
-                            </div>
-                            <div class="info-item">
-                                <div>P: ${pair.player_score || 0}점</div>
-                            </div>
-                            <div class="info-item">
-                                <div>B: ${pair.banker_score || 0}점</div>
-                            </div>
+                            <div class="info-item">게임 #${pair.game_number || 'N/A'}</div>
+                            <div class="info-item">승부: ${pair.winner || 'N/A'}</div>
+                            <div class="info-item">P: ${pair.player_score || 0}점</div>
+                            <div class="info-item">B: ${pair.banker_score || 0}점</div>
                         </div>
                         
                         <div style="margin-bottom: 10px;">
@@ -378,10 +376,10 @@
                         </div>
                         
                         ${pairVisualizations.map(viz => `
-                            <div class="card-simulation">
+                            <div class="card-display">
                                 <div><strong>${viz.type}:</strong> ${viz.description}</div>
                                 ${viz.cards_simulated && viz.cards_simulated.length > 0 ? `
-                                    <div class="simulated-cards">
+                                    <div class="cards">
                                         ${viz.cards_simulated.map(card => {
                                             const isRed = card.card && (card.card.includes('♥') || card.card.includes('♦'));
                                             return `<div class="card ${isRed ? 'red' : ''}">${card.card || '?'}</div>`;
@@ -451,9 +449,12 @@
                 };
                 
                 ws.onclose = function(event) {
-                    console.log('WebSocket 연결 끊어짐');
+                    console.log('WebSocket 연결 종료');
                     // 5초 후 재연결 시도
-                    setTimeout(connectWebSocket, 5000);
+                    if (reconnectInterval) {
+                        clearTimeout(reconnectInterval);
+                    }
+                    reconnectInterval = setTimeout(connectWebSocket, 5000);
                 };
                 
                 ws.onerror = function(error) {
