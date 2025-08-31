@@ -215,43 +215,47 @@ class EnhancedPairDetector:
         return visualization
     
     def simulate_pair_cards(self, side: str, final_score: int) -> List[Dict[str, str]]:
-        """페어 카드 시뮬레이션 (실제 카드 정보가 없으므로)"""
+        """페어 카드 시뮬레이션 - 같은 무늬 같은 숫자 페어만 표시"""
         
-        # 최종 점수를 기반으로 가능한 페어 조합 추정
-        possible_pairs = []
+        # 실제 페어는 같은 무늬의 같은 숫자여야 함
+        # 점수를 기반으로 가능한 페어 카드 추정
+        import random
         
-        # 0점 페어 (10, J, Q, K)
+        suits = ['♠', '♥', '♦', '♣']
+        
+        # 점수별 페어 가능 카드들
         if final_score == 0:
-            possible_pairs = [
-                [{'card': '10♠', 'rank': '10'}, {'card': '10♥', 'rank': '10'}],
-                [{'card': 'J♠', 'rank': 'J'}, {'card': 'J♥', 'rank': 'J'}],
-                [{'card': 'Q♠', 'rank': 'Q'}, {'card': 'Q♥', 'rank': 'Q'}],
-                [{'card': 'K♠', 'rank': 'K'}, {'card': 'K♥', 'rank': 'K'}]
-            ]
-        
-        # 1점 페어 (A)
-        elif final_score == 2:  # A+A = 2
-            possible_pairs = [[{'card': 'A♠', 'rank': 'A'}, {'card': 'A♥', 'rank': 'A'}]]
-        
-        # 4점 페어 (2)
-        elif final_score == 4:  # 2+2 = 4
-            possible_pairs = [[{'card': '2♠', 'rank': '2'}, {'card': '2♥', 'rank': '2'}]]
-        
-        # 6점 페어 (3)
-        elif final_score == 6:  # 3+3 = 6
-            possible_pairs = [[{'card': '3♠', 'rank': '3'}, {'card': '3♥', 'rank': '3'}]]
-        
-        # 8점 페어 (4)
-        elif final_score == 8:  # 4+4 = 8
-            possible_pairs = [[{'card': '4♠', 'rank': '4'}, {'card': '4♥', 'rank': '4'}]]
-        
-        # 기타 점수의 경우 일반적인 페어
+            # 0점이 되는 페어: 10-10, J-J, Q-Q, K-K
+            ranks = ['10', 'J', 'Q', 'K']
+            rank = random.choice(ranks)
+        elif final_score == 2:
+            # 2점이 되는 페어: A-A (1+1=2)
+            rank = 'A'
+        elif final_score == 4:
+            # 4점이 되는 페어: 2-2 (2+2=4)
+            rank = '2'
+        elif final_score == 6:
+            # 6점이 되는 페어: 3-3 (3+3=6)
+            rank = '3'
+        elif final_score == 8:
+            # 8점이 되는 페어: 4-4 (4+4=8)
+            rank = '4'
         else:
-            rank = str(min(final_score, 9))
-            possible_pairs = [[{'card': f'{rank}♠', 'rank': rank}, {'card': f'{rank}♥', 'rank': rank}]]
+            # 기타 점수 (홀수 점수는 실제로 페어로 만들 수 없음)
+            # 하지만 시뮬레이션을 위해 가장 가까운 값 사용
+            if final_score <= 9:
+                rank = str(final_score)
+            else:
+                rank = str(final_score % 10)
         
-        # 첫 번째 가능한 조합 반환
-        return possible_pairs[0] if possible_pairs else []
+        # 같은 무늬 선택
+        suit = random.choice(suits)
+        
+        # 같은 무늬의 같은 카드 2장 반환
+        return [
+            {'card': f'{rank}{suit}', 'rank': rank},
+            {'card': f'{rank}{suit}', 'rank': rank}
+        ]
     
     def process_packet_file(self, file_path: Path) -> List[Dict[str, Any]]:
         """패킷 파일 전체 처리"""

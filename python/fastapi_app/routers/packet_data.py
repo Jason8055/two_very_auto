@@ -13,18 +13,17 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import re
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from card_display_system import HybridCardDisplaySystem
-from enhanced_pair_detector import enhanced_pair_detector
-from improved_pair_detector import improved_pair_detector
+
+# 상대 경로 import 사용
+from ..card_display_system import HybridCardDisplaySystem
+from ..enhanced_pair_detector import enhanced_pair_detector
+from ..improved_pair_detector import improved_pair_detector
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# 패킷 폴더 경로
-PACKET_FOLDER = Path("F:/two very auto 25.08.23/packet")
+# 패킷 폴더 경로 (프로젝트 루트 기준)
+PACKET_FOLDER = Path(__file__).parent.parent.parent.parent / "packet"
 
 class PacketDataExtractor:
     """패킷 데이터 추출기 - 핵심 목적에 특화"""
@@ -141,37 +140,61 @@ class PacketDataExtractor:
 
 extractor = PacketDataExtractor()
 
-@router.get("/packet-data/pairs", response_model=List[Dict[str, Any]])
+@router.get("/packet-data/pairs", response_model=Dict[str, Any])
 async def get_pair_data(
-    limit: int = Query(50, ge=1, le=500, description="결과 제한수"),
+    limit: int = Query(20, ge=1, le=100, description="결과 제한수"),
     room_filter: Optional[str] = Query(None, description="방명 필터"),
     date_filter: Optional[str] = Query(None, description="날짜 필터 (YYYY-MM-DD)")
 ):
     """
-    패킷 데이터에서 페어 정보만 추출
+    패킷 데이터에서 페어 정보만 추출 - 성능 최적화 버전
     핵심 목적: 첫 두장 같은 무늬 같은 숫자 감지 및 표시
     """
     try:
-        all_pairs = []
+        from datetime import datetime, timedelta
+        import time
         
-        # 패킷 폴더 탐색
-        for date_folder in PACKET_FOLDER.iterdir():
-            if not date_folder.is_dir():
+        start_time = time.time()
+        all_pairs = []
+        max_files_total = 20    # 전체 최대 파일 처리 제한 (더 감소)
+        processed_files = 0
+        
+        # 현재 날짜만 처리 (더 제한적)
+        current_date = datetime.now()
+        today_str = current_date.strftime("%Y%m%d")
+        
+        # 오늘 날짜 폴더만 확인
+        today_folder = PACKET_FOLDER / today_str
+        if not today_folder.exists():
+            # 오늘 폴더가 없으면 가장 최근 폴더 사용
+            date_folders = [f for f in PACKET_FOLDER.iterdir() if f.is_dir()]
+            if date_folders:
+                today_folder = max(date_folders, key=lambda x: x.name)
+            else:
+                return {
+                    "success": True,
+                    "message": "패킷 폴더에 데이터가 없습니다",
+                    "statistics": {"total_pairs": 0, "player_pairs": 0, "banker_pairs": 0, "both_pairs": 0},
+                    "pairs": [],
+                    "total_files_scanned": 0,
+                    "timestamp": datetime.now().isoformat()
+                }
+        
+        # 파일 처리 (최신 5개만)
+        packet_files = list(today_folder.glob("*.txt"))
+        packet_files = [f for f in packet_files if f.name not in ['Main.txt', 'Rejected.txt']]
+        
+        # 최신 파일 순으로 정렬하고 제한
+        packet_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        packet_files = packet_files[:max_files_total]
+        
+        for packet_file in packet_files:
+            # 방명 필터 적용
+            if room_filter and room_filter not in packet_file.name:
                 continue
             
-            # 날짜 필터 적용
-            if date_filter and date_filter.replace('-', '') not in date_folder.name:
-                continue
-            
-            for packet_file in date_folder.glob("*.txt"):
-                if packet_file.name in ['Main.txt', 'Rejected.txt']:
-                    continue
-                
-                # 방명 필터 적용
-                if room_filter and room_filter not in packet_file.name:
-                    continue
-                
-                # 향상된 페어 감지기로 분석
+            try:
+                # 타임아웃 방지를 위해 간단한 처리
                 pairs_found = enhanced_pair_detector.process_packet_file(packet_file)
                 
                 for pair in pairs_found:
@@ -179,28 +202,313 @@ async def get_pair_data(
                     pair['date'] = extractor.extract_date_from_path(packet_file)
                     
                 all_pairs.extend(pairs_found)
+                processed_files += 1
+                
+                # 처리 시간 체크 (5초 제한)
+                if time.time() - start_time > 5:
+                    logger.warning("API 처리 시간 제한 도달, 조기 종료")
+                    break
+                    
+            except Exception as file_error:
+                logger.warning(f"파일 처리 오류 {packet_file}: {file_error}")
+                continue
         
         # 시간순 정렬 및 제한
-        all_pairs.sort(key=lambda x: x['timestamp'], reverse=True)
+        all_pairs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         limited_pairs = all_pairs[:limit]
         
-        # 통계 추가
-        stats = enhanced_pair_detector.get_pair_statistics(limited_pairs)
+        # 기본 통계
+        stats = {
+            "total_pairs": len(limited_pairs),
+            "player_pairs": len([p for p in limited_pairs if p.get('pair_details', {}).get('player_pair')]),
+            "banker_pairs": len([p for p in limited_pairs if p.get('pair_details', {}).get('banker_pair')]),
+            "both_pairs": len([p for p in limited_pairs if p.get('pair_details', {}).get('both_pairs')])
+        }
+        
+        processing_time = time.time() - start_time
         
         return {
             "success": True,
-            "message": f"총 {len(limited_pairs)}개의 페어 발견",
+            "message": f"총 {len(limited_pairs)}개의 페어 발견 (파일 {processed_files}개 처리)",
             "statistics": stats,
             "pairs": limited_pairs,
-            "total_files_scanned": len([f for date_folder in PACKET_FOLDER.iterdir() 
-                                      for f in date_folder.glob("*.txt") 
-                                      if f.name not in ['Main.txt', 'Rejected.txt']]),
-            "timestamp": datetime.now().isoformat()
+            "total_files_scanned": processed_files,
+            "timestamp": datetime.now().isoformat(),
+            "performance": {
+                "processing_time_seconds": round(processing_time, 2),
+                "limited_processing": True,
+                "max_files_total": max_files_total,
+                "folder_processed": today_folder.name
+            }
         }
         
     except Exception as e:
         logger.error(f"페어 데이터 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"페어 데이터 조회 실패: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        # 안전한 기본 응답 반환
+        return {
+            "success": False,
+            "message": "패킷 데이터 처리 중 오류 발생",
+            "error": str(e),
+            "statistics": {"total_pairs": 0, "player_pairs": 0, "banker_pairs": 0, "both_pairs": 0},
+            "pairs": [],
+            "total_files_scanned": 0,
+            "timestamp": datetime.now().isoformat()
+        }
+
+@router.get("/rooms/statistics", response_model=Dict[str, Any])
+async def get_rooms_statistics(
+    date_filter: Optional[str] = Query(None, description="날짜 필터 (YYYY-MM-DD)")
+):
+    """모든 방의 페어 통계 정보 조회"""
+    try:
+        from datetime import datetime, timedelta
+        import time
+        from collections import defaultdict
+        
+        start_time = time.time()
+        room_stats = defaultdict(lambda: {
+            "room_name": "",
+            "total_pairs": 0,
+            "player_pairs": 0,
+            "banker_pairs": 0,
+            "both_pairs": 0,
+            "last_activity": "",
+            "games_processed": 0,
+            "sample_pairs": []
+        })
+        
+        # 현재 날짜만 처리 (성능 최적화)
+        current_date = datetime.now()
+        today_str = current_date.strftime("%Y%m%d")
+        
+        # 날짜 폴더 확인
+        if date_filter:
+            target_date = date_filter.replace('-', '')
+            target_folder = PACKET_FOLDER / target_date
+        else:
+            target_folder = PACKET_FOLDER / today_str
+            if not target_folder.exists():
+                date_folders = [f for f in PACKET_FOLDER.iterdir() if f.is_dir()]
+                if date_folders:
+                    target_folder = max(date_folders, key=lambda x: x.name)
+        
+        if not target_folder.exists():
+            return {
+                "success": True,
+                "message": "해당 날짜의 데이터가 없습니다",
+                "rooms": [],
+                "total_rooms": 0,
+                "timestamp": datetime.now().isoformat()
+            }
+        
+        # 방별로 파일 그룹화
+        room_files = defaultdict(list)
+        packet_files = list(target_folder.glob("*.txt"))
+        packet_files = [f for f in packet_files if f.name not in ['Main.txt', 'Rejected.txt']]
+        
+        for packet_file in packet_files[:100]:  # 최대 100개 파일만 처리
+            room_name = extractor.extract_room_name(packet_file.name)
+            room_files[room_name].append(packet_file)
+        
+        # 각 방별로 통계 계산
+        for room_name, files in room_files.items():
+            # 방별로 최대 5개 파일만 처리 (성능 최적화)
+            files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+            files = files[:5]
+            
+            for packet_file in files:
+                try:
+                    pairs_found = enhanced_pair_detector.process_packet_file(packet_file)
+                    
+                    for pair in pairs_found:
+                        pair['room_name'] = room_name
+                        pair['date'] = extractor.extract_date_from_path(packet_file)
+                        
+                        # 통계 업데이트
+                        room_stats[room_name]["total_pairs"] += 1
+                        
+                        if pair.get('pair_details', {}).get('player_pair'):
+                            room_stats[room_name]["player_pairs"] += 1
+                        if pair.get('pair_details', {}).get('banker_pair'):
+                            room_stats[room_name]["banker_pairs"] += 1
+                        if pair.get('pair_details', {}).get('both_pairs'):
+                            room_stats[room_name]["both_pairs"] += 1
+                        
+                        # 샘플 페어 저장 (최대 3개)
+                        if len(room_stats[room_name]["sample_pairs"]) < 3:
+                            room_stats[room_name]["sample_pairs"].append(pair)
+                        
+                        # 최근 활동 시간 업데이트
+                        if not room_stats[room_name]["last_activity"] or pair.get('timestamp', '') > room_stats[room_name]["last_activity"]:
+                            room_stats[room_name]["last_activity"] = pair.get('timestamp', '')
+                    
+                    room_stats[room_name]["games_processed"] += 1
+                    room_stats[room_name]["room_name"] = room_name
+                    
+                except Exception as file_error:
+                    logger.warning(f"파일 처리 오류 {packet_file}: {file_error}")
+                    continue
+            
+            # 처리 시간 체크 (10초 제한)
+            if time.time() - start_time > 10:
+                logger.warning("방별 통계 처리 시간 제한 도달")
+                break
+        
+        # 결과 정리
+        rooms_list = []
+        for room_name, stats in room_stats.items():
+            if stats["total_pairs"] > 0:  # 페어가 있는 방만 포함
+                rooms_list.append(stats)
+        
+        # 페어 수 기준으로 정렬
+        rooms_list.sort(key=lambda x: x["total_pairs"], reverse=True)
+        
+        processing_time = time.time() - start_time
+        
+        return {
+            "success": True,
+            "message": f"총 {len(rooms_list)}개 방의 통계 분석 완료",
+            "rooms": rooms_list,
+            "total_rooms": len(rooms_list),
+            "timestamp": datetime.now().isoformat(),
+            "performance": {
+                "processing_time_seconds": round(processing_time, 2),
+                "folder_processed": target_folder.name,
+                "total_files_available": len(packet_files)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"방별 통계 조회 실패: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": "방별 통계 처리 중 오류 발생",
+            "error": str(e),
+            "rooms": [],
+            "total_rooms": 0,
+            "timestamp": datetime.now().isoformat()
+        }
+
+@router.get("/rooms/{room_name}/pairs", response_model=Dict[str, Any])
+async def get_room_pairs(
+    room_name: str,
+    limit: int = Query(20, ge=1, le=100, description="결과 제한수"),
+    date_filter: Optional[str] = Query(None, description="날짜 필터 (YYYY-MM-DD)")
+):
+    """특정 방의 페어 상세 목록 조회"""
+    try:
+        from datetime import datetime, timedelta
+        import time
+        
+        start_time = time.time()
+        all_pairs = []
+        
+        # 현재 날짜만 처리
+        current_date = datetime.now()
+        today_str = current_date.strftime("%Y%m%d")
+        
+        if date_filter:
+            target_date = date_filter.replace('-', '')
+            target_folder = PACKET_FOLDER / target_date
+        else:
+            target_folder = PACKET_FOLDER / today_str
+            if not target_folder.exists():
+                date_folders = [f for f in PACKET_FOLDER.iterdir() if f.is_dir()]
+                if date_folders:
+                    target_folder = max(date_folders, key=lambda x: x.name)
+        
+        if not target_folder.exists():
+            return {
+                "success": True,
+                "message": f"방 '{room_name}'의 데이터가 없습니다",
+                "room_name": room_name,
+                "pairs": [],
+                "total_pairs": 0,
+                "timestamp": datetime.now().isoformat()
+            }
+        
+        # 해당 방의 파일들만 필터링
+        packet_files = []
+        for file_path in target_folder.glob("*.txt"):
+            if file_path.name in ['Main.txt', 'Rejected.txt']:
+                continue
+            
+            file_room_name = extractor.extract_room_name(file_path.name)
+            if file_room_name == room_name:
+                packet_files.append(file_path)
+        
+        # 최신 순으로 정렬하고 제한
+        packet_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        packet_files = packet_files[:20]  # 최대 20개 파일
+        
+        for packet_file in packet_files:
+            try:
+                pairs_found = enhanced_pair_detector.process_packet_file(packet_file)
+                
+                for pair in pairs_found:
+                    pair['room_name'] = room_name
+                    pair['date'] = extractor.extract_date_from_path(packet_file)
+                    
+                all_pairs.extend(pairs_found)
+                
+                # 처리 시간 체크 (5초 제한)
+                if time.time() - start_time > 5:
+                    logger.warning(f"방 '{room_name}' 처리 시간 제한 도달")
+                    break
+                    
+            except Exception as file_error:
+                logger.warning(f"파일 처리 오류 {packet_file}: {file_error}")
+                continue
+        
+        # 시간순 정렬 및 제한
+        all_pairs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        limited_pairs = all_pairs[:limit]
+        
+        # 통계
+        stats = {
+            "total_pairs": len(limited_pairs),
+            "player_pairs": len([p for p in limited_pairs if p.get('pair_details', {}).get('player_pair')]),
+            "banker_pairs": len([p for p in limited_pairs if p.get('pair_details', {}).get('banker_pair')]),
+            "both_pairs": len([p for p in limited_pairs if p.get('pair_details', {}).get('both_pairs')])
+        }
+        
+        processing_time = time.time() - start_time
+        
+        return {
+            "success": True,
+            "message": f"방 '{room_name}'에서 {len(limited_pairs)}개 페어 발견",
+            "room_name": room_name,
+            "statistics": stats,
+            "pairs": limited_pairs,
+            "total_pairs": len(all_pairs),
+            "files_processed": len(packet_files),
+            "timestamp": datetime.now().isoformat(),
+            "performance": {
+                "processing_time_seconds": round(processing_time, 2),
+                "folder_processed": target_folder.name
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"방 '{room_name}' 페어 조회 실패: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": f"방 '{room_name}' 데이터 처리 중 오류 발생",
+            "error": str(e),
+            "room_name": room_name,
+            "pairs": [],
+            "total_pairs": 0,
+            "timestamp": datetime.now().isoformat()
+        }
 
 @router.get("/packet-data/live-pairs", response_model=Dict[str, Any])
 async def get_live_pairs():

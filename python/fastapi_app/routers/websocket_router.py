@@ -459,6 +459,65 @@ async def broadcast_message(message: dict):
             'timestamp': datetime.now().isoformat()
         }
 
+@router.websocket("/pair-updates")
+async def websocket_pair_updates_endpoint(websocket: WebSocket):
+    """
+    페어 업데이트 전용 WebSocket
+    
+    pair-display 페이지에서 실시간 페어 데이터를 받기 위한 엔드포인트
+    """
+    # 헤더에서 클라이언트 정보 추출
+    headers = dict(websocket.headers)
+    user_agent = headers.get('user-agent', 'Unknown')
+    client_host = headers.get('host', 'Unknown')
+    
+    client_id = f"pair_updates_{datetime.now().strftime('%H%M%S')}"
+    await websocket_manager.connect(
+        websocket, 
+        client_id, 
+        ClientType.API_CLIENT,
+        client_host,
+        user_agent
+    )
+    
+    try:
+        # 페어 업데이트 초기화 데이터
+        db = DatabaseManager()
+        await db.initialize()
+        
+        try:
+            # 최근 페어 데이터 조회
+            from routers.improved_pair_api import get_recent_pairs, get_stats_overview
+            recent_pairs = await get_recent_pairs(limit=10)
+            stats = await get_stats_overview()
+            
+            await websocket_manager.send_personal_message({
+                'type': 'pair_updates_init',
+                'data': {
+                    'recent_pairs': recent_pairs,
+                    'stats': stats,
+                    'client_id': client_id,
+                    'features': ['실시간 페어 업데이트', '통계 정보', '테이블 상태']
+                }
+            }, websocket)
+        finally:
+            await db.close()
+        
+        # 페어 업데이트 구독 자동 설정
+        client_info = websocket_manager.client_info.get(websocket, {})
+        client_info['subscriptions'].update(['pairs', 'pair_updates', 'stats'])
+        
+        while True:
+            data = await websocket.receive_text()
+            message_data = json.loads(data)
+            await handle_websocket_message(websocket, message_data)
+            
+    except WebSocketDisconnect:
+        await websocket_manager.disconnect(websocket)
+    except Exception as e:
+        logger.error(f"❌ 페어 업데이트 WebSocket 오류: {e}")
+        await websocket_manager.disconnect(websocket)
+
 # 외부에서 사용할 수 있도록 매니저 노출
 def get_websocket_manager():
     """WebSocket 매니저 반환 (다른 모듈에서 사용)"""

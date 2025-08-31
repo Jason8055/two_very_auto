@@ -170,7 +170,7 @@ class HybridCardDisplaySystem:
             cards = []
             
             if has_pair and target_score < 10:
-                # 페어가 있는 경우
+                # 페어가 있는 경우 - 같은 무늬의 같은 숫자
                 if target_score == 0:
                     rank = random.choice(['10', 'J', 'Q', 'K'])
                     value = 0
@@ -178,11 +178,11 @@ class HybridCardDisplaySystem:
                     rank = str(target_score)
                     value = target_score
                 
-                # 같은 랭크 2장
-                suit1, suit2 = random.sample(suits, 2)
+                # 같은 무늬의 같은 랭크 2장 (진짜 페어)
+                suit = random.choice(suits)
                 cards = [
-                    {'card': f'{rank}{suit1}', 'rank': rank, 'suit': suit1, 'baccarat_value': value},
-                    {'card': f'{rank}{suit2}', 'rank': rank, 'suit': suit2, 'baccarat_value': value}
+                    {'card': f'{rank}{suit}', 'rank': rank, 'suit': suit, 'baccarat_value': value},
+                    {'card': f'{rank}{suit}', 'rank': rank, 'suit': suit, 'baccarat_value': value}
                 ]
             else:
                 # 일반적인 경우

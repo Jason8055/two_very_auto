@@ -44,12 +44,15 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+server.log
+server_output.log
 
 # Runtime data
 pids/
 *.pid
 *.seed
 *.pid.lock
+server.pid
 
 # Coverage directory used by tools like istanbul
 coverage/
@@ -161,6 +164,10 @@ shared_memory.dat
 # Archives
 archives/
 
+# Database files (temp and write-ahead-log)
+*.db-shm
+*.db-wal
+
 # Duplicate database files (keep only optimized versions)
 baccarat_monitor_pwa_v2.db
 baccarat_data.db
@@ -171,3 +178,9 @@ main_casino_baccarat_data.db
 enhanced_dashboard.html
 modern_dashboard.html
 realtime_dashboard.html
+
+# Special case files
+nul
+
+# System optimization files
+system_cleanup_and_optimization.bat

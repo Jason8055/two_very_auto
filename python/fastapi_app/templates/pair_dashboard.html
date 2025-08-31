@@ -99,6 +99,16 @@
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
         }
         
+        .room-card {
+            transition: all 0.3s ease;
+        }
+        
+        .room-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+            border-left-width: 8px;
+        }
+        
         .pair-header {
             display: flex;
             justify-content: space-between;
@@ -237,7 +247,15 @@
             <!-- 통계 정보가 여기에 로드됩니다 -->
         </div>
         
-        <button class="refresh-btn" onclick="loadPairData()">🔄 새로고침</button>
+        <div style="text-align: center; margin: 20px 0;" id="controlPanel">
+            <button class="refresh-btn" onclick="loadCurrentData()">🔄 새로고침</button>
+            <button class="refresh-btn" onclick="toggleAutoRefresh()" id="autoRefreshBtn" style="margin-left: 15px;">
+                ⏱️ 자동 새로고침 시작
+            </button>
+            <button class="refresh-btn" onclick="goBackToRooms()" id="backBtn" style="margin-left: 15px; display: none;">
+                ← 방 목록으로
+            </button>
+        </div>
         
         <div class="pair-grid" id="pairGrid">
             <div class="loading pulse">
@@ -255,47 +273,180 @@
         let ws = null;
         let reconnectInterval = null;
         
+        let autoRefreshInterval = null;
+        let autoRefreshEnabled = false;
+        
         // 페이지 로드시 초기화
         document.addEventListener('DOMContentLoaded', function() {
-            loadPairData();
+            loadRoomsData(); // 방별 통계부터 시작
             connectWebSocket();
             
-            // 30초마다 자동 새로고침
-            setInterval(loadPairData, 30000);
+            // 자동 새로고침은 기본적으로 비활성화
+            // 사용자가 원할 때만 활성화
         });
         
-        // 페어 데이터 로드
-        async function loadPairData() {
+        let currentView = 'rooms'; // 'rooms' 또는 'pairs'
+        let currentRoom = '';
+        
+        // 초기 방별 통계 로드
+        async function loadRoomsData() {
             try {
-                console.log('페어 데이터 로딩 시작...');
+                console.log('방별 통계 로딩 시작...');
                 
-                const response = await fetch('/api/packet-data/pairs?limit=20');
+                const response = await fetch('/api/rooms/statistics');
                 const data = await response.json();
                 
-                console.log('페어 데이터 응답:', data);
+                console.log('방별 통계 응답:', data);
                 
                 if (data.success) {
-                    displayStatistics(data.statistics || {});
-                    displayPairs(data.pairs || []);
+                    displayRoomsStatistics(data.rooms || []);
                     updateTimestamp();
                 } else {
-                    showError('데이터 로드 실패: ' + (data.message || '알 수 없는 오류'));
+                    showError('방별 통계 로드 실패: ' + (data.message || '알 수 없는 오류'));
                 }
                 
             } catch (error) {
-                console.error('페어 데이터 로드 오류:', error);
+                console.error('방별 통계 로드 오류:', error);
                 showError('서버 연결 실패: ' + error.message);
             }
         }
         
-        // 통계 정보 표시
-        function displayStatistics(stats) {
+        // 특정 방의 페어 데이터 로드
+        async function loadRoomPairs(roomName) {
+            try {
+                console.log(`방 '${roomName}' 페어 데이터 로딩 시작...`);
+                
+                const response = await fetch(`/api/rooms/${encodeURIComponent(roomName)}/pairs?limit=20`);
+                const data = await response.json();
+                
+                console.log('방별 페어 데이터 응답:', data);
+                
+                if (data.success) {
+                    currentView = 'pairs';
+                    currentRoom = roomName;
+                    displayRoomPairs(data);
+                    updateTimestamp();
+                } else {
+                    showError('방별 페어 데이터 로드 실패: ' + (data.message || '알 수 없는 오류'));
+                }
+                
+            } catch (error) {
+                console.error('방별 페어 데이터 로드 오류:', error);
+                showError('서버 연결 실패: ' + error.message);
+            }
+        }
+        
+        // 현재 뷰에 따라 데이터 로드
+        async function loadCurrentData() {
+            if (currentView === 'rooms') {
+                await loadRoomsData();
+            } else if (currentView === 'pairs' && currentRoom) {
+                await loadRoomPairs(currentRoom);
+            }
+        }
+        
+        // 방별 통계 표시
+        function displayRoomsStatistics(rooms) {
+            const pairGrid = document.getElementById('pairGrid');
             const statsGrid = document.getElementById('statsGrid');
             
+            // 전체 통계 계산
+            const totalStats = {
+                total_pairs: rooms.reduce((sum, room) => sum + room.total_pairs, 0),
+                player_pairs: rooms.reduce((sum, room) => sum + room.player_pairs, 0),
+                banker_pairs: rooms.reduce((sum, room) => sum + room.banker_pairs, 0),
+                both_pairs: rooms.reduce((sum, room) => sum + room.both_pairs, 0)
+            };
+            
+            // 전체 통계 표시
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <h3 style="color: #4ecdc4;">${totalStats.total_pairs}</h3>
+                    <div>전체 페어 수</div>
+                </div>
+                <div class="stat-card">
+                    <h3 style="color: #ff6b6b;">${totalStats.player_pairs}</h3>
+                    <div>플레이어 페어</div>
+                </div>
+                <div class="stat-card">
+                    <h3 style="color: #45b7d1;">${totalStats.banker_pairs}</h3>
+                    <div>뱅커 페어</div>
+                </div>
+                <div class="stat-card">
+                    <h3 style="color: #ffd93d;">${totalStats.both_pairs}</h3>
+                    <div>양쪽 페어</div>
+                </div>
+                <div class="stat-card">
+                    <h3 style="color: #9c88ff;">${rooms.length}</h3>
+                    <div>활성 방 수</div>
+                </div>
+            `;
+            
+            if (!rooms || rooms.length === 0) {
+                pairGrid.innerHTML = `
+                    <div class="no-data">
+                        <h3>📊 방 데이터 없음</h3>
+                        <p>현재 활성화된 방이 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 방별 카드 표시
+            pairGrid.innerHTML = rooms.map(room => {
+                const pairRate = room.total_pairs > 0 ? ((room.player_pairs + room.banker_pairs + room.both_pairs) / room.total_pairs * 100).toFixed(1) : 0;
+                
+                return `
+                    <div class="pair-card room-card" onclick="loadRoomPairs('${room.room_name}')" style="cursor: pointer;">
+                        <div class="pair-header">
+                            <div class="pair-type">${room.room_name}</div>
+                            <div class="pair-icon">🎯</div>
+                        </div>
+                        
+                        <div class="game-info">
+                            <div class="info-item">
+                                <div>총 페어: ${room.total_pairs}</div>
+                            </div>
+                            <div class="info-item">
+                                <div>플레이어: ${room.player_pairs}</div>
+                            </div>
+                            <div class="info-item">
+                                <div>뱅커: ${room.banker_pairs}</div>
+                            </div>
+                            <div class="info-item">
+                                <div>양쪽: ${room.both_pairs}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 10px;">
+                            <div><strong>처리된 게임:</strong> ${room.games_processed}개</div>
+                            <div><strong>페어율:</strong> ${pairRate}%</div>
+                            <div><strong>최근 활동:</strong> ${formatTimestamp(room.last_activity)}</div>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                            <small>클릭하여 상세 페어 목록 보기</small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // 뒤로가기 버튼 숨기기
+            document.getElementById('backBtn').style.display = 'none';
+        }
+        
+        // 특정 방의 페어 목록 표시
+        function displayRoomPairs(data) {
+            const pairGrid = document.getElementById('pairGrid');
+            const statsGrid = document.getElementById('statsGrid');
+            const pairs = data.pairs || [];
+            const stats = data.statistics || {};
+            
+            // 방별 통계 표시
             statsGrid.innerHTML = `
                 <div class="stat-card">
                     <h3 style="color: #4ecdc4;">${stats.total_pairs || 0}</h3>
-                    <div>총 페어 수</div>
+                    <div>${data.room_name} 총 페어</div>
                 </div>
                 <div class="stat-card">
                     <h3 style="color: #ff6b6b;">${stats.player_pairs || 0}</h3>
@@ -309,24 +460,25 @@
                     <h3 style="color: #ffd93d;">${stats.both_pairs || 0}</h3>
                     <div>양쪽 페어</div>
                 </div>
+                <div class="stat-card">
+                    <h3 style="color: #9c88ff;">${data.files_processed || 0}</h3>
+                    <div>분석 파일 수</div>
+                </div>
             `;
-        }
-        
-        // 페어 정보 표시
-        function displayPairs(pairs) {
-            const pairGrid = document.getElementById('pairGrid');
             
             if (!pairs || pairs.length === 0) {
                 pairGrid.innerHTML = `
                     <div class="no-data">
-                        <h3>📊 페어 데이터 없음</h3>
-                        <p>현재 감지된 페어가 없습니다.</p>
-                        <p>패킷 폴더에서 JSON 데이터를 확인해보세요.</p>
+                        <h3>📊 ${data.room_name} 페어 데이터 없음</h3>
+                        <p>현재 해당 방에서 감지된 페어가 없습니다.</p>
                     </div>
                 `;
+                // 뒤로가기 버튼 표시
+                document.getElementById('backBtn').style.display = 'inline-block';
                 return;
             }
             
+            // 페어 목록 표시 (기존 스타일 유지)
             pairGrid.innerHTML = pairs.map(pair => {
                 const pairTypes = pair.pair_type || [];
                 const pairDetails = pair.pair_details || {};
@@ -393,6 +545,16 @@
                     </div>
                 `;
             }).join('');
+            
+            // 뒤로가기 버튼 표시
+            document.getElementById('backBtn').style.display = 'inline-block';
+        }
+        
+        // 방 목록으로 돌아가기
+        function goBackToRooms() {
+            currentView = 'rooms';
+            currentRoom = '';
+            loadRoomsData();
         }
         
         // 타임스탬프 포맷
@@ -424,6 +586,30 @@
             timestampElement.textContent = `마지막 업데이트: ${now}`;
         }
         
+        // 자동 새로고침 토글
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (autoRefreshEnabled) {
+                // 자동 새로고침 중지
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+                autoRefreshEnabled = false;
+                btn.textContent = '⏱️ 자동 새로고침 시작';
+                btn.style.background = 'linear-gradient(45deg, #4ecdc4, #45b7d1)';
+                console.log('자동 새로고침 비활성화');
+            } else {
+                // 자동 새로고침 시작
+                autoRefreshInterval = setInterval(loadCurrentData, 30000);
+                autoRefreshEnabled = true;
+                btn.textContent = '⏹️ 자동 새로고침 중지';
+                btn.style.background = 'linear-gradient(45deg, #ff6b6b, #ff8e53)';
+                console.log('자동 새로고침 활성화 (30초 간격)');
+            }
+        }
+
         // WebSocket 연결
         function connectWebSocket() {
             try {
@@ -441,8 +627,9 @@
                         const data = JSON.parse(event.data);
                         console.log('WebSocket 메시지 수신:', data);
                         
-                        // 새로운 페어 데이터가 있으면 자동 새로고침
-                        if (data.type === 'pair_detected') {
+                        // 새로운 페어 데이터가 있으면 수동으로만 새로고침
+                        // 자동 새로고침이 활성화된 경우에만 자동 로드
+                        if (data.type === 'pair_detected' && autoRefreshEnabled) {
                             loadPairData();
                         }
                     } catch (e) {

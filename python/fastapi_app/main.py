@@ -34,11 +34,17 @@ def validation_exception_handler(request, exc):
 # Smart Output System 추가
 from utils.smart_output import section_header, server_status, info, success, warning, error
 
-from routers import demo, stats, websocket_router, notifications, ai_predictions, database_performance, pair_notifications, historical_games, packet_data, improved_pair_api
+from routers import (
+    demo, stats, websocket_router, notifications, ai_predictions, 
+    database_performance, pair_notifications, historical_games, 
+    packet_data, improved_pair_api, test_pairs_api
+)
 from services.database import DatabaseManager
 from services.optimized_database import OptimizedDatabaseManager
 from services.cache_manager import cache_manager
-from services.notification_service import notification_service, WebSocketNotificationChannel, LogNotificationChannel
+from services.notification_service import (
+    notification_service, WebSocketNotificationChannel, LogNotificationChannel
+)
 from services.pair_notification_service import pair_notification_service
 from services.pair_broadcast_service import pair_broadcast_service, BroadcastChannelType
 from services.connection_monitor import connection_monitor
@@ -87,6 +93,7 @@ app.include_router(database_performance.router, prefix="/api/database", tags=["d
 app.include_router(historical_games.router, prefix="/api/historical", tags=["historical-games"])
 app.include_router(packet_data.router, prefix="/api", tags=["packet-data"])
 app.include_router(improved_pair_api.router, prefix="/api", tags=["improved-pairs"])
+app.include_router(test_pairs_api.router, prefix="/api", tags=["test-pairs"])
 app.include_router(websocket_router.router, prefix="/ws", tags=["websocket"])
 
 @app.on_event("startup")
