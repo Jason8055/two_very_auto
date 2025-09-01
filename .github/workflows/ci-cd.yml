@@ -163,7 +163,7 @@ jobs:
 
     - name: Build and Push Web Image
       id: build
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         file: ./docker/Dockerfile.web
@@ -175,7 +175,7 @@ jobs:
         cache-to: type=gha,mode=max
 
     - name: Build and Push AI Engine Image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         file: ./docker/Dockerfile.ai
