@@ -23,7 +23,8 @@
       "Bash(cmd:*)",
       "Bash(start:*)",
       "Bash(\"빠른_서버_시작.bat\")",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(cp:*)"
     ],
     "deny": [],
     "ask": []

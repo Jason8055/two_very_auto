@@ -13,10 +13,13 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-# 개선된 페어 감지기 임포트 (상대 경로 사용)
-from ..improved_pair_detector import improved_pair_detector
-from ..services.database import DatabaseManager
-from ..services.optimized_database import OptimizedDatabaseManager
+# 개선된 페어 감지기 임포트 (절대 경로 사용)
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from improved_pair_detector import improved_pair_detector
+from services.database import DatabaseManager
+from services.optimized_database import OptimizedDatabaseManager
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

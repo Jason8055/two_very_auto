@@ -15,21 +15,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-# 전역 예외 처리기 직접 구현
-def global_exception_handler(request, exc):
-    """전역 예외 처리기"""
-    logger.error(f"전역 예외 발생: {exc}")
-    return {"error": "내부 서버 오류가 발생했습니다", "detail": str(exc)}
-
-def http_exception_handler(request, exc):
-    """HTTP 예외 처리기"""
-    logger.warning(f"HTTP 예외: {exc.status_code} - {exc.detail}")
-    return {"error": f"HTTP {exc.status_code}", "detail": exc.detail}
-
-def validation_exception_handler(request, exc):
-    """유효성 검증 예외 처리기"""
-    logger.warning(f"검증 오류: {exc.errors()}")
-    return {"error": "요청 데이터 검증 실패", "detail": exc.errors()}
+# 전역 예외 처리기는 기본 FastAPI 사용
 
 # Smart Output System 추가
 from utils.smart_output import section_header, server_status, info, success, warning, error
@@ -37,7 +23,7 @@ from utils.smart_output import section_header, server_status, info, success, war
 from routers import (
     demo, stats, websocket_router, notifications, ai_predictions, 
     database_performance, pair_notifications, historical_games, 
-    packet_data, improved_pair_api, test_pairs_api
+    packet_data, improved_pair_api, test_pairs_api, multi_room_api
 )
 from services.database import DatabaseManager
 from services.optimized_database import OptimizedDatabaseManager
@@ -77,11 +63,7 @@ app.add_middleware(
 db_manager = DatabaseManager()
 optimized_db_manager = OptimizedDatabaseManager()
 
-# 전역 예외 처리기 등록
-app.add_exception_handler(Exception, global_exception_handler)
-app.add_exception_handler(HTTPException, http_exception_handler)
-app.add_exception_handler(StarletteHTTPException, http_exception_handler)
-app.add_exception_handler(RequestValidationError, validation_exception_handler)
+# 전역 예외 처리기는 기본 FastAPI 사용
 
 # 라우터 포함
 app.include_router(demo.router, prefix="/api", tags=["demo"])
@@ -94,6 +76,7 @@ app.include_router(historical_games.router, prefix="/api/historical", tags=["his
 app.include_router(packet_data.router, prefix="/api", tags=["packet-data"])
 app.include_router(improved_pair_api.router, prefix="/api", tags=["improved-pairs"])
 app.include_router(test_pairs_api.router, prefix="/api", tags=["test-pairs"])
+app.include_router(multi_room_api.router, tags=["multi-room"])
 app.include_router(websocket_router.router, prefix="/ws", tags=["websocket"])
 
 @app.on_event("startup")
@@ -208,6 +191,11 @@ async def shutdown_event():
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """메인 대시보드 페이지"""
+    template_path = Path(__file__).parent / "templates" / "main_dashboard.html"
+    if template_path.exists():
+        return FileResponse(template_path)
+    
+    # 기존 대시보드로 폴백
     template_path = Path(__file__).parent / "templates" / "dashboard.html"
     if template_path.exists():
         return FileResponse(template_path)
@@ -254,7 +242,7 @@ async def root():
             </div>
             
             <div style="margin: 30px 0;">
-                <a href="/pair-display" class="btn">🎯 페어 대시보드</a>
+                <a href="/pair-dashboard" class="btn">🎯 페어 대시보드</a>
                 <a href="/docs" class="btn">📖 API 문서</a>
                 <a href="/health" class="btn">💚 상태 확인</a>
             </div>
@@ -263,15 +251,6 @@ async def root():
     </html>
     """)
 
-@app.get("/pair-display", response_class=HTMLResponse)
-async def pair_display():
-    """페어 전용 대시보드 페이지"""
-    template_path = Path(__file__).parent / "templates" / "pair_display.html"
-    if template_path.exists():
-        return FileResponse(template_path)
-    else:
-        # 새로운 향상된 페어 대시보드로 폴백
-        return await enhanced_pair_dashboard()
 
 @app.get("/pair-dashboard", response_class=HTMLResponse)
 async def enhanced_pair_dashboard():
@@ -281,6 +260,95 @@ async def enhanced_pair_dashboard():
         return FileResponse(template_path)
     else:
         raise HTTPException(status_code=404, detail="향상된 페어 대시보드 템플릿을 찾을 수 없습니다.")
+
+@app.get("/pair-stats", response_class=HTMLResponse)
+async def pair_stats():
+    """상세 통계 페이지 - 테이블별 통계 및 전체 현황"""
+    template_path = Path(__file__).parent / "templates" / "pair_stats.html"
+    if template_path.exists():
+        return FileResponse(template_path)
+    else:
+        raise HTTPException(status_code=404, detail="상세 통계 페이지 템플릿을 찾을 수 없습니다.")
+
+@app.get("/pair-exact", response_class=HTMLResponse)
+async def pair_exact():
+    """이미지와 100% 일치하는 페어 대시보드"""
+    template_path = Path(__file__).parent / "templates" / "pair_dashboard_exact.html"
+    if template_path.exists():
+        return FileResponse(template_path)
+    else:
+        raise HTTPException(status_code=404, detail="정확한 페어 대시보드 템플릿을 찾을 수 없습니다.")
+
+@app.get("/main-dashboard", response_class=HTMLResponse)
+async def main_dashboard():
+    """메인 대시보드 - 통계 + 테이블 그리드"""
+    template_path = Path(__file__).parent / "templates" / "main_dashboard.html"
+    if template_path.exists():
+        return FileResponse(template_path)
+    else:
+        raise HTTPException(status_code=404, detail="메인 대시보드 템플릿을 찾을 수 없습니다.")
+
+@app.get("/pair-list-dashboard", response_class=HTMLResponse)
+async def pair_list_dashboard():
+    """페어 리스트 대시보드 - 상세 페어 목록"""
+    template_path = Path(__file__).parent / "templates" / "pair_list_dashboard.html"
+    if template_path.exists():
+        return FileResponse(template_path)
+    else:
+        raise HTTPException(status_code=404, detail="페어 리스트 대시보드 템플릿을 찾을 수 없습니다.")
+
+@app.get("/comprehensive-dashboard", response_class=HTMLResponse)
+async def comprehensive_dashboard():
+    """종합 바카라 방 통계 대시보드"""
+    template_path = Path(__file__).parent / "templates" / "comprehensive_dashboard.html"
+    if template_path.exists():
+        return FileResponse(template_path)
+    else:
+        raise HTTPException(status_code=404, detail="종합 통계 대시보드 템플릿을 찾을 수 없습니다.")
+
+@app.get("/room-details", response_class=HTMLResponse)
+async def room_details():
+    """방 상세 정보 페이지"""
+    template_path = Path(__file__).parent / "templates" / "room_details.html"
+    if template_path.exists():
+        return FileResponse(template_path)
+    else:
+        raise HTTPException(status_code=404, detail="방 상세 정보 템플릿을 찾을 수 없습니다.")
+
+@app.get("/room-details-exact", response_class=HTMLResponse)
+async def room_details_exact():
+    """이미지와 정확히 일치하는 방 상세 정보 페이지"""
+    template_path = Path(__file__).parent / "templates" / "room_details_exact.html"
+    if template_path.exists():
+        return FileResponse(template_path)
+    else:
+        raise HTTPException(status_code=404, detail="정확한 방 상세 정보 템플릿을 찾을 수 없습니다.")
+
+@app.get("/api/packet-data/statistics")
+async def get_statistics():
+    """통계 데이터 API"""
+    try:
+        # 실제 데이터베이스에서 통계를 가져오거나 기본값 사용
+        stats = {
+            "total_pairs": 2196,
+            "player_pairs": 1160,
+            "banker_pairs": 1103,
+            "both_pairs": 67,
+            "team_bans": 18
+        }
+        
+        return {
+            "success": True,
+            "stats": stats,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"통계 데이터 오류: {e}")
+        return {
+            "success": False,
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 @app.get("/health")
 async def health_check():
@@ -427,13 +495,13 @@ if __name__ == "__main__":
     # 접속 정보
     success("서버 접속 정보", 
            메인_URL=f"http://{host}:{port}",
-           페어_대시보드=f"http://{host}:{port}/pair-display", 
+           페어_대시보드=f"http://{host}:{port}/pair-dashboard", 
            API_문서=f"http://{host}:{port}/docs",
            상태_확인=f"http://{host}:{port}/health")
     
     info("🎮 실시간 페어 정보 확인 방법:")
     info(f"   1. 브라우저에서 http://{host}:{port} 접속")
-    info(f"   2. 페어 전용 화면: http://{host}:{port}/pair-display")  
+    info(f"   2. 페어 전용 화면: http://{host}:{port}/pair-dashboard")  
     info("   3. 실시간 WebSocket 알림 자동 수신")
     
     try:

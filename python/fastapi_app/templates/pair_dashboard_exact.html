@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Two Very Auto - 페어 정보 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #2a3441;
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* 상단 버튼 */
+        .top-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #4dd0e1;
+            color: #ffffff;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            z-index: 100;
+        }
+        
+        .top-button:hover {
+            background: #26c6da;
+        }
+        
+        /* 메인 그리드 */
+        .pair-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 50px;
+        }
+        
+        /* 페어 카드 */
+        .pair-card {
+            background: #3c4651;
+            border-radius: 12px;
+            padding: 16px;
+            position: relative;
+            min-height: 280px;
+        }
+        
+        .pair-card.player {
+            border: 2px solid #ff5252;
+        }
+        
+        .pair-card.banker {
+            border: 2px solid #42a5f5;
+        }
+        
+        /* 상단 헤더 */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .pair-title {
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .pair-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            position: relative;
+        }
+        
+        .pair-icon.player {
+            background: #ff5252;
+        }
+        
+        .pair-icon.banker {
+            background: #42a5f5;
+        }
+        
+        /* 게임 정보 그리드 */
+        .game-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .info-box {
+            background: #2a3441;
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            color: #ffffff;
+        }
+        
+        /* 상세 정보 */
+        .details {
+            font-size: 12px;
+            color: #b0bec5;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+        
+        .details div {
+            margin: 2px 0;
+        }
+        
+        /* 페어 설명 */
+        .pair-description {
+            background: #2a3441;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            font-size: 13px;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+        
+        /* 카드 시각화 */
+        .cards {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        
+        .card {
+            background: #ffffff;
+            color: #000000;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 14px;
+            font-weight: bold;
+            min-width: 32px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        
+        .card.red {
+            color: #d32f2f;
+        }
+        
+        .card.black {
+            color: #212121;
+        }
+        
+        .loading {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            color: #90a4ae;
+        }
+        
+        /* 반응형 */
+        @media (max-width: 1200px) {
+            .pair-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .pair-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="top-button" onclick="window.location.href='/'">← 방 목록으로</button>
+        
+        <div class="pair-grid" id="pairGrid">
+            <div class="loading">
+                데이터를 불러오는 중...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 샘플 데이터 - 이미지와 정확히 일치
+        const sampleData = [
+            {
+                type: 'player',
+                gameNumber: '2',
+                result: 'Tie',
+                playerScore: '6',
+                bankerScore: '6',
+                tableId: 'obj64qcnqfunjejl',
+                roomName: '스피드 바카라 J',
+                time: '2025. 8. 20. 오후 4:00:14',
+                cards: ['3♠', '3♥']
+            },
+            {
+                type: 'player',
+                gameNumber: '11',
+                result: 'Player',
+                playerScore: '7',
+                bankerScore: '3',
+                tableId: 'obj64qcnqfunjejl',
+                roomName: '스피드 바카라 J',
+                time: '2025. 8. 20. 오후 4:00:14',
+                cards: ['7♠', '7♥']
+            },
+            {
+                type: 'banker',
+                gameNumber: '12',
+                result: 'Banker',
+                playerScore: '7',
+                bankerScore: '9',
+                tableId: 'obj64qcnqfunjejl',
+                roomName: '스피드 바카라 J',
+                time: '2025. 8. 20. 오후 4:00:14',
+                cards: ['9♠', '9♥']
+            },
+            {
+                type: 'player',
+                gameNumber: '26',
+                result: 'Player',
+                playerScore: '8',
+                bankerScore: '2',
+                tableId: 'obj64qcnqfunjejl',
+                roomName: '스피드 바카라 J',
+                time: '2025. 8. 20. 오후 4:00:14',
+                cards: ['4♠', '4♥']
+            },
+            {
+                type: 'player',
+                gameNumber: '49',
+                result: 'Banker',
+                playerScore: '4',
+                bankerScore: '7',
+                tableId: 'obj64qcnqfunjejl',
+                roomName: '스피드 바카라 J',
+                time: '2025. 8. 20. 오후 4:00:14',
+                cards: ['2♠', '2♥']
+            },
+            {
+                type: 'player',
+                gameNumber: '53',
+                result: 'Player',
+                playerScore: '7',
+                bankerScore: '4',
+                tableId: 'obj64qcnqfunjejl',
+                roomName: '스피드 바카라 J',
+                time: '2025. 8. 20. 오후 4:00:14',
+                cards: ['7♠', '7♥']
+            },
+            {
+                type: 'player',
+                gameNumber: '67',
+                result: 'Tie',
+                playerScore: '5',
+                bankerScore: '5',
+                tableId: 'obj64qcnqfunjejl',
+                roomName: '스피드 바카라 J',
+                time: '2025. 8. 20. 오후 4:00:14',
+                cards: ['5♠', '5♥']
+            },
+            {
+                type: 'player',
+                gameNumber: '82',
+                result: 'Player',
+                playerScore: '8',
+                bankerScore: '3',
+                tableId: 'obj64qcnqfunjejl',
+                roomName: '스피드 바카라 J',
+                time: '2025. 8. 20. 오후 4:00:14',
+                cards: ['8♠', '8♥']
+            },
+            {
+                type: 'banker',
+                gameNumber: '95',
+                result: 'Banker',
+                playerScore: '4',
+                bankerScore: '8',
+                tableId: 'obj64qcnqfunjejl',
+                roomName: '스피드 바카라 J',
+                time: '2025. 8. 20. 오후 4:00:14',
+                cards: ['A♠', 'A♥']
+            }
+        ];
+        
+        // 페이지 로드시 데이터 표시
+        document.addEventListener('DOMContentLoaded', function() {
+            displayPairs(sampleData);
+        });
+        
+        function displayPairs(pairs) {
+            const pairGrid = document.getElementById('pairGrid');
+            
+            pairGrid.innerHTML = pairs.map(pair => {
+                const cardClass = `pair-card ${pair.type}`;
+                const iconClass = `pair-icon ${pair.type}`;
+                const pairText = pair.type === 'player' ? 'Player Pair' : 'Banker Pair';
+                const descriptionText = pair.type === 'player' 
+                    ? 'Player Pair: 플레이어 첫 두 장 같은 숫자 확인됨'
+                    : 'Banker Pair: 뱅커 첫 두 장 같은 숫자 확인됨';
+                
+                const cardElements = pair.cards.map(card => {
+                    const isRed = card.includes('♥') || card.includes('♦');
+                    return `<div class="card ${isRed ? 'red' : 'black'}">${card}</div>`;
+                }).join('');
+                
+                return `
+                    <div class="${cardClass}">
+                        <div class="card-header">
+                            <div class="pair-title">${pairText}</div>
+                            <div class="${iconClass}"></div>
+                        </div>
+                        
+                        <div class="game-info">
+                            <div class="info-box">게임 #${pair.gameNumber}</div>
+                            <div class="info-box">승부: ${pair.result}</div>
+                            <div class="info-box">P: ${pair.playerScore}점</div>
+                            <div class="info-box">B: ${pair.bankerScore}점</div>
+                        </div>
+                        
+                        <div class="details">
+                            <div><strong>테이블:</strong> ${pair.tableId}</div>
+                            <div><strong>방명:</strong> ${pair.roomName}</div>
+                            <div><strong>시간:</strong> ${pair.time}</div>
+                        </div>
+                        
+                        <div class="pair-description">
+                            ${descriptionText}
+                            <div class="cards">
+                                ${cardElements}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>

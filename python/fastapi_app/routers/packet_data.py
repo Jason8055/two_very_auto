@@ -14,10 +14,13 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 import re
 
-# 상대 경로 import 사용
-from ..card_display_system import HybridCardDisplaySystem
-from ..enhanced_pair_detector import enhanced_pair_detector
-from ..improved_pair_detector import improved_pair_detector
+# 절대 경로 import 사용 (패키지 구조 문제로 인해)
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from card_display_system import HybridCardDisplaySystem
+from enhanced_pair_detector import enhanced_pair_detector
+from improved_pair_detector import improved_pair_detector
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
