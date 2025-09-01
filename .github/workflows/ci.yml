@@ -71,7 +71,7 @@ jobs:
         run: safety check --json --output safety-report.json || true
 
       - name: Upload security reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-reports
           path: |
@@ -216,7 +216,7 @@ jobs:
           python performance_benchmark.py
           
       - name: Upload performance results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-results
           path: python/fastapi_app/performance_benchmark_results.json
