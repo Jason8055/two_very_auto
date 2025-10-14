@@ -1,5 +1,5 @@
 # Two Very Auto v3.0 - AI 엔진 컨테이너
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # 메타데이터
 LABEL maintainer="Two Very Auto Team"
