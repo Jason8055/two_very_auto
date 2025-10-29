@@ -346,7 +346,7 @@ jobs:
         BASE_URL: https://staging.two-very-auto.com
 
     - name: Upload Performance Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v5
       with:
         name: performance-results
         path: results.json
